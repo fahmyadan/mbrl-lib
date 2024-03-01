@@ -175,6 +175,7 @@ class ModelTrainer:
                 else:
                     epochs_since_update += 1
                 model_val_score = eval_score.mean()
+                #TODO: Add evaluation score to wandb logging
 
             if self.logger and not silent:
                 self.logger.log_data(
@@ -258,6 +259,8 @@ class ModelTrainer:
 
         mean_axis = 1 if batch_scores.ndim == 2 else (1, 2)
         batch_scores = batch_scores.mean(dim=mean_axis)
+
+        #TODO: Log eval loss to wandb
 
         return batch_scores
 

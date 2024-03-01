@@ -125,6 +125,9 @@ class OneDTransitionRewardModel(Model):
                 target_obs[..., dim] = next_obs[..., dim]
         else:
             target_obs = next_obs
+
+        if self.obs_process_fn:
+            target_obs = self.obs_process_fn(target_obs)
         target_obs = model_util.to_tensor(target_obs).to(self.device)
 
         model_in = self._get_model_input(obs, action)

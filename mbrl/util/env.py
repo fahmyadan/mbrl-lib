@@ -13,6 +13,7 @@ import torch
 
 import mbrl.planning
 import mbrl.types
+from mbrl.env.HighwayEnv.highway_env.envs.intersection_env import IntersectionEnv
 
 
 def _get_term_and_reward_fn(
@@ -96,6 +97,11 @@ def _legacy_make_env(
             env = mbrl.env.mujoco_envs.HumanoidTruncatedObsEnv()
             term_fn = mbrl.env.termination_fns.humanoid
             reward_fn = None
+        elif cfg.overrides.env == "intersection-v0":
+            env_args = omegaconf.OmegaConf.to_container(cfg.overrides.env_args)   
+            env = IntersectionEnv(env_args, render_mode='rgb_array')
+            term_fn = mbrl.env.termination_fns.highway_env
+            reward_fn = None 
         else:
             raise ValueError("Invalid environment string.")
         env = gym.wrappers.TimeLimit(

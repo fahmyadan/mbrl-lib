@@ -218,6 +218,7 @@ class BasicEnsemble(Ensemble):
             loss, meta = model.loss(model_ins[i], targets[i])
             ensemble_meta[f"model_{i}"] = meta
             avg_ensemble_loss += loss
+        #TODO: Add WANDB logging for train loss
         return avg_ensemble_loss / len(self.members), ensemble_meta
 
     def eval_score(  # type: ignore

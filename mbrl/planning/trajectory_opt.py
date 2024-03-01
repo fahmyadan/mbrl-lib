@@ -741,6 +741,7 @@ def create_trajectory_optim_agent_for_model(
     agent = hydra.utils.instantiate(agent_cfg)
 
     def trajectory_eval_fn(initial_state, action_sequences):
+
         return model_env.evaluate_action_sequences(
             action_sequences, initial_state=initial_state, num_particles=num_particles
         )

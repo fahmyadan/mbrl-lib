@@ -1,0 +1,44 @@
+# @package _group_
+env: "intersection-v0"
+env_args:
+  _target_: mbrl.planning.TrajectoryOptimizerAgent
+  offroad_terminal: true
+  destination: 'o1'
+  initial_vehicle_count: 10
+  spawn_probability: 0
+  collision_reward: -10
+  on_road_reward: 1 
+  path_reward: 0
+  arrived_reward: 10
+  observation:
+    type: Kinematics
+    features:
+      - presence
+      - vx
+      - vy
+      - lane_id
+      - heading
+    absolute: false
+  action: 
+    type: ContinuousAction
+
+obs_process_fn: mbrl.env.observation_fns.highway_env
+learned_rewards: false
+trial_length: 20
+num_steps: 500
+
+num_elites: 5
+model_lr: 7.5e-4
+model_wd: 3e-5
+model_batch_size: 256
+validation_ratio: 0
+freq_train_model: 50
+patience: 25
+num_epochs_train_model: 25
+
+planning_horizon: 15
+cem_num_iters: 5
+cem_elite_ratio: 0.1
+cem_population_size: 350
+cem_alpha: 0.1
+cem_clipped_normal: false

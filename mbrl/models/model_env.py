@@ -9,6 +9,7 @@ import numpy as np
 import torch
 
 import mbrl.types
+from mbrl.env.HighwayEnv.highway_env.envs.intersection_env import IntersectionEnv
 
 from . import Model
 
@@ -41,11 +42,13 @@ class ModelEnv:
         termination_fn: mbrl.types.TermFnType,
         reward_fn: Optional[mbrl.types.RewardFnType] = None,
         generator: Optional[torch.Generator] = None,
+        obs_process_fn: Optional[mbrl.types.ObsProcessFnType] = None,
     ):
         self.dynamics_model = model
         self.termination_fn = termination_fn
         self.reward_fn = reward_fn
         self.device = model.device
+        self.env = env
 
         self.observation_space = env.observation_space
         self.action_space = env.action_space
@@ -58,6 +61,7 @@ class ModelEnv:
         else:
             self._rng = torch.Generator(device=self.device)
         self._return_as_np = True
+        self.obs_process_fn = obs_process_fn
 
     def reset(
         self, initial_obs_batch: np.ndarray, return_as_np: bool = True
@@ -126,7 +130,10 @@ class ModelEnv:
                 if self.reward_fn is None
                 else self.reward_fn(actions, next_observs)
             )
-            dones = self.termination_fn(actions, next_observs)
+            if isinstance(self.env.unwrapped, IntersectionEnv):
+                dones = self.termination_fn(actions, next_observs, self.env)
+            else:
+                dones = self.termination_fn(actions, next_observs)
 
             if pred_terminals is not None:
                 raise NotImplementedError(
@@ -166,11 +173,13 @@ class ModelEnv:
             assert len(action_sequences.shape) == 3
             population_size, horizon, action_dim = action_sequences.shape
             # either 1-D state or 3-D pixel observation
-            assert initial_state.ndim in (1, 3)
+            assert initial_state.ndim in (1,2, 3)
             tiling_shape = (num_particles * population_size,) + tuple(
                 [1] * initial_state.ndim
             )
             initial_obs_batch = np.tile(initial_state, tiling_shape).astype(np.float32)
+            if self.obs_process_fn:
+                initial_obs_batch = self.obs_process_fn(initial_obs_batch)
             model_state = self.reset(initial_obs_batch, return_as_np=False)
             batch_size = initial_obs_batch.shape[0]
             total_rewards = torch.zeros(batch_size, 1).to(self.device)

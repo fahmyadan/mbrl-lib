@@ -80,7 +80,13 @@ def create_one_dim_tr_model(
     if issubclass(hydra.utils._locate(model_cfg._target_), mbrl.models.BasicEnsemble):
         model_cfg = model_cfg.member_cfg
     if model_cfg.get("in_size", None) is None:
-        model_cfg.in_size = obs_shape[0] + (act_shape[0] if act_shape else 1)
+       
+        if cfg.overrides.env_args.observation.type == 'Kinematics':
+            model_cfg.in_size = (np.concatenate((np.zeros(obs_shape), np.zeros(act_shape)), axis=0).shape)[0]
+        else:  
+            model_cfg.in_size = obs_shape[0] + (act_shape[0] if act_shape else 1)
+
+    
     if model_cfg.get("out_size", None) is None:
         model_cfg.out_size = obs_shape[0] + int(cfg.algorithm.learned_rewards)
 

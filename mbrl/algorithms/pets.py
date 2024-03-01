@@ -17,6 +17,7 @@ import mbrl.types
 import mbrl.util
 import mbrl.util.common
 import mbrl.util.math
+from mbrl.env.HighwayEnv.highway_env.envs.intersection_env import IntersectionEnv
 
 EVAL_LOG_FORMAT = mbrl.constants.EVAL_LOG_FORMAT
 
@@ -31,9 +32,18 @@ def train(
 ) -> np.float32:
     # ------------------- Initialization -------------------
     debug_mode = cfg.get("debug_mode", False)
+    raw_obs_shape = env.observation_space.shape
+    if isinstance(env.unwrapped, IntersectionEnv) and cfg.overrides.env_args.observation.type == 'Kinematics':
+        h, w = env.observation_space.shape
+        obs_shape = (h * w, )
+    else:
+         obs_shape = env.observation_space.shape
+    if isinstance(env.unwrapped, IntersectionEnv) and isinstance(env.action_space, gym.spaces.Discrete):
+        
+        act_shape = (env.action_space.n, 1)
 
-    obs_shape = env.observation_space.shape
-    act_shape = env.action_space.shape
+    else: 
+        act_shape = env.action_space.shape
 
     rng = np.random.default_rng(seed=cfg.seed)
     torch_generator = torch.Generator(device=cfg.device)
@@ -57,7 +67,7 @@ def train(
     dtype = np.double if use_double_dtype else np.float32
     replay_buffer = mbrl.util.common.create_replay_buffer(
         cfg,
-        obs_shape,
+        raw_obs_shape,
         act_shape,
         rng=rng,
         obs_type=dtype,
@@ -76,7 +86,7 @@ def train(
     # ---------------------------------------------------------
     # ---------- Create model environment and agent -----------
     model_env = mbrl.models.ModelEnv(
-        env, dynamics_model, termination_fn, reward_fn, generator=torch_generator
+        env, dynamics_model, termination_fn, reward_fn, generator=torch_generator, obs_process_fn=dynamics_model.obs_process_fn
     )
     model_trainer = mbrl.models.ModelTrainer(
         dynamics_model,

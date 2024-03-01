@@ -93,3 +93,9 @@ def humanoid(act: torch.Tensor, next_obs: torch.Tensor):
 
     done = done[:, None]
     return done
+
+def highway_env(act: torch.Tensor, next_obs: torch.Tensor, env):
+
+    #TODO: write position based or velocity based terminal check 
+
+    return env.unwrapped._is_terminated()
