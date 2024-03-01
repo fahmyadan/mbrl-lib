@@ -1,0 +1,3 @@
+[submodule "mbrl/env/HighwayEnv"]
+	path = mbrl/env/HighwayEnv
+	url = git@github.com:fahmyadan/HighwayEnv.git
