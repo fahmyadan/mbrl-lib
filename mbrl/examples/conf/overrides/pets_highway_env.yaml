@@ -14,6 +14,8 @@ env_args:
     type: Kinematics
     features:
       - presence
+      - x
+      - y
       - vx
       - vy
       - lane_id
