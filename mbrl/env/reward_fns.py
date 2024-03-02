@@ -51,3 +51,19 @@ def pusher(act: torch.Tensor, next_obs: torch.Tensor) -> torch.Tensor:
     act_cost = 0.1 * (act**2).sum(axis=1)
 
     return -(obs_cost + act_cost).view(-1, 1)
+
+def highway_env(act: torch.Tensor, next_obs: torch.Tensor, collision_threshold=2.0) -> torch.Tensor:
+
+    ego_obs = next_obs[:, :7]
+    other_vehs = next_obs[:, 7:]
+    other_vehs = other_vehs.view(other_vehs.shape[0], -1,ego_obs.shape[1])
+
+    rel_x, rel_y = other_vehs[:, :, 1], other_vehs[:, :, 2]
+
+    dist_squared = rel_x**2 + rel_y**2
+
+    collision_mask = dist_squared < (collision_threshold**2)
+
+    #TODO: Add path tracking
+
+    return -1 * collision_mask.sum(dim=1).unsqueeze(-1)

@@ -101,7 +101,7 @@ def _legacy_make_env(
             env_args = omegaconf.OmegaConf.to_container(cfg.overrides.env_args)   
             env = IntersectionEnv(env_args, render_mode='rgb_array')
             term_fn = mbrl.env.termination_fns.highway_env
-            reward_fn = None 
+            reward_fn = mbrl.env.reward_fns.highway_env 
         else:
             raise ValueError("Invalid environment string.")
         env = gym.wrappers.TimeLimit(
