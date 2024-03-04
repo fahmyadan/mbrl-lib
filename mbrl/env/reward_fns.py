@@ -5,8 +5,10 @@
 import torch
 
 from . import termination_fns
-
-
+from highway_env.road.lane import StraightLane, CircularLane
+import numpy as np
+device ='cuda' if torch.cuda.is_available() else 'cpu'
+ 
 def cartpole(act: torch.Tensor, next_obs: torch.Tensor) -> torch.Tensor:
     assert len(next_obs.shape) == len(act.shape) == 2
 
@@ -52,7 +54,7 @@ def pusher(act: torch.Tensor, next_obs: torch.Tensor) -> torch.Tensor:
 
     return -(obs_cost + act_cost).view(-1, 1)
 
-def highway_env(act: torch.Tensor, next_obs: torch.Tensor, collision_threshold=2.0) -> torch.Tensor:
+def highway_env(act: torch.Tensor, next_obs: torch.Tensor, veh_obj= None, collision_threshold=2.0,) -> torch.Tensor:
 
     ego_obs = next_obs[:, :7]
     other_vehs = next_obs[:, 7:]
@@ -65,5 +67,47 @@ def highway_env(act: torch.Tensor, next_obs: torch.Tensor, collision_threshold=2
     collision_mask = dist_squared < (collision_threshold**2)
 
     #TODO: Add path tracking
+    veh_obj = veh_obj[0]
+    lanes_ahead = [veh_obj.road.network.get_lane(r) for r in veh_obj.route] 
+    traj = torch.tensor(global_path(lanes_ahead, veh_obj)).to(device)
+    ego_next_position = ego_obs[:, 1:3]
 
-    return -1 * collision_mask.sum(dim=1).unsqueeze(-1)
+    batch, n = ego_next_position.shape
+    next_position = ego_next_position.reshape(batch, 1, n)
+    distance = torch.norm(next_position - traj, dim= 2)
+
+    min_distance = torch.min(distance, dim = 1)
+    sq_error = min_distance.values **2 
+
+    reward = -1 * collision_mask.sum(dim=1) - sq_error
+
+    return reward.unsqueeze(-1)
+
+def global_path(lanes_to_go, veh_obj):
+
+    trajectory = []
+
+    for lane in lanes_to_go: 
+        if isinstance(lane, CircularLane):
+
+            arc_points = lane.get_arc_points()
+            nodeless_arc_points = arc_points[1:-1]
+            trajectory.append(nodeless_arc_points)
+        elif isinstance(lane, StraightLane): 
+            startx, starty = lane.start[0], lane.start[1]
+            endx, endy = lane.end[0], lane.end[1]
+            x_n = np.linspace(startx, endx, 40)
+            y_n = np.linspace(starty, endy, 40)
+            new = np.column_stack((x_n, y_n))
+            nodeless_new = new[1:-1]
+            trajectory.append(nodeless_new)
+
+    trajectory = np.concatenate(trajectory)
+    closest_pos = trajectory[0]
+    for idx, pos in enumerate(trajectory):
+
+        if np.linalg.norm(veh_obj.position - pos) <= np.linalg.norm(veh_obj.position - closest_pos):
+            closest_pos = pos
+            closest_idx = idx
+
+    return trajectory[closest_idx:]

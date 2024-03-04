@@ -125,11 +125,19 @@ class ModelEnv:
                 deterministic=not sample,
                 rng=self._rng,
             )
-            rewards = (
-                pred_rewards
-                if self.reward_fn is None
-                else self.reward_fn(actions, next_observs)
-            )
+            if not isinstance(self.env.unwrapped, IntersectionEnv):
+                rewards = (
+                    pred_rewards
+                    if self.reward_fn is None
+                    else self.reward_fn(actions, next_observs)
+                )
+            else:
+                rewards = (
+                    pred_rewards
+                    if self.reward_fn is None
+                    else self.reward_fn(actions, next_observs, self.env.unwrapped.controlled_vehicles)
+                )
+
             if isinstance(self.env.unwrapped, IntersectionEnv):
                 dones = self.termination_fn(actions, next_observs, self.env)
             else:
