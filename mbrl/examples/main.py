@@ -11,15 +11,21 @@ import mbrl.algorithms.mbpo as mbpo
 import mbrl.algorithms.pets as pets
 import mbrl.algorithms.planet as planet
 import mbrl.util.env
-
+import wandb
+from callbacks import WandbCallback
 
 @hydra.main(config_path="conf", config_name="main")
 def run(cfg: omegaconf.DictConfig):
     env, term_fn, reward_fn = mbrl.util.env.EnvHandler.make_env(cfg)
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
+    if cfg.overrides.logging.wandb:
+        wandb_cfg = omegaconf.OmegaConf.to_container(cfg.overrides)
+        wandb_run = wandb.init(project= cfg.overrides.logging.project_name, config=wandb_cfg, sync_tensorboard=True, monitor_gym=True)
+        wanb_cbs = [WandbCallback('loss'), WandbCallback('reward')]
+
     if cfg.algorithm.name == "pets":
-        return pets.train(env, term_fn, reward_fn, cfg)
+        return pets.train(env, term_fn, reward_fn, cfg, callbacks=wanb_cbs)
     if cfg.algorithm.name == "mbpo":
         test_env, *_ = mbrl.util.env.EnvHandler.make_env(cfg)
         return mbpo.train(env, test_env, term_fn, cfg)
