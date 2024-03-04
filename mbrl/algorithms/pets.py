@@ -3,7 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import os
-from typing import Optional
+from typing import Optional, List, Any
 
 import gymnasium as gym
 import numpy as np
@@ -29,6 +29,7 @@ def train(
     cfg: omegaconf.DictConfig,
     silent: bool = False,
     work_dir: Optional[str] = None,
+    callbacks: List[Any] = None,
 ) -> np.float32:
     # ------------------- Initialization -------------------
     debug_mode = cfg.get("debug_mode", False)
@@ -61,6 +62,9 @@ def train(
             mbrl.constants.RESULTS_LOG_NAME, EVAL_LOG_FORMAT, color="green"
         )
 
+    if callbacks:
+
+        loss_cb, reward_cb = callbacks
     # -------- Create and populate initial env dataset --------
     dynamics_model = mbrl.util.common.create_one_dim_tr_model(cfg, obs_shape, act_shape)
     use_double_dtype = cfg.algorithm.get("normalize_double_precision", False)
@@ -80,6 +84,7 @@ def train(
         mbrl.planning.RandomAgent(env),
         {},
         replay_buffer=replay_buffer,
+        
     )
     replay_buffer.save(work_dir)
 
@@ -120,6 +125,7 @@ def train(
                     cfg.overrides,
                     replay_buffer,
                     work_dir=work_dir,
+                    callback= loss_cb
                 )
 
             # --- Doing env step using the agent and adding to model dataset ---
@@ -130,7 +136,7 @@ def train(
                 truncated,
                 _,
             ) = mbrl.util.common.step_env_and_add_to_buffer(
-                env, obs, agent, {}, replay_buffer
+                env, obs, agent, {}, replay_buffer, callback=reward_cb
             )
 
             obs = next_obs

@@ -613,5 +613,5 @@ def step_env_and_add_to_buffer(
     next_obs, reward, terminated, truncated, info = env.step(action)
     replay_buffer.add(obs, action, next_obs, reward, terminated, truncated)
     if callback:
-        callback((obs, action, next_obs, reward, terminated, truncated))
+        callback(*(obs, action, next_obs, reward, terminated, truncated))
     return next_obs, reward, terminated, truncated, info
