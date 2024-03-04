@@ -23,7 +23,8 @@ def run(cfg: omegaconf.DictConfig):
         wandb_cfg = omegaconf.OmegaConf.to_container(cfg.overrides)
         wandb_run = wandb.init(project= cfg.overrides.logging.project_name, config=wandb_cfg, sync_tensorboard=True, monitor_gym=True)
         wanb_cbs = [WandbCallback('loss'), WandbCallback('reward')]
-
+    else :
+        wanb_cbs = None
     if cfg.algorithm.name == "pets":
         return pets.train(env, term_fn, reward_fn, cfg, callbacks=wanb_cbs)
     if cfg.algorithm.name == "mbpo":

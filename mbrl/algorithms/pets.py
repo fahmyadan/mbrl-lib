@@ -65,6 +65,8 @@ def train(
     if callbacks:
 
         loss_cb, reward_cb = callbacks
+    else:
+        loss_cb = reward_cb = None 
     # -------- Create and populate initial env dataset --------
     dynamics_model = mbrl.util.common.create_one_dim_tr_model(cfg, obs_shape, act_shape)
     use_double_dtype = cfg.algorithm.get("normalize_double_precision", False)
