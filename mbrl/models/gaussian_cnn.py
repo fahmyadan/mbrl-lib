@@ -103,16 +103,19 @@ class GaussianCnn(GaussianMLP):
         else:
             #forward pass for cnn ensembles
             outputs = []
+            batch_size, channels, _,_ = img.shape
             for model in self.cnn_ensemble:
                 enc, dec = model[0], model[1]
                 enc.to(self.device)  # Ensure the model is on the correct device
-                # dec.to(self.device)
+                dec.to(self.device)
 
                 z_act = enc.linear_embed(act.to(dtype=torch.float32))
                 z_img = enc.conv(img.to(dtype=torch.float32))
 
+                z_img_flat = z_img.view(batch_size, -1)
+                latent_z = torch.concatenate([z_act, z_img_flat], dim =1)
 
-                latent_z = torch.stack([z_img, z_act])
+                latent_z_test = torch.stack([z_img, z_act])
             out = [model(x) for model in self.cnn_ensemble]
 
         return out
