@@ -99,7 +99,7 @@ def _legacy_make_env(
             reward_fn = None
         elif cfg.overrides.env == "intersection-v0":
             env_args = omegaconf.OmegaConf.to_container(cfg.overrides.env_args)   
-            env = IntersectionEnv(env_args, render_mode='rgb_array')
+            env = IntersectionEnv(env_args, render_mode='human')
             term_fn = mbrl.env.termination_fns.highway_env
             reward_fn = mbrl.env.reward_fns.highway_env 
         else:

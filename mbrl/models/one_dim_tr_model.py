@@ -11,6 +11,7 @@ import torch
 import mbrl.models.util as model_util
 import mbrl.types
 import mbrl.util.math
+from .gaussian_cnn import GaussianCnn
 
 from .model import Ensemble, Model
 
@@ -109,7 +110,11 @@ class OneDTransitionRewardModel(Model):
             obs = self.obs_process_fn(obs)
         obs = model_util.to_tensor(obs).to(self.device)
         action = model_util.to_tensor(action).to(self.device)
-        model_in = torch.cat([obs, action], dim=obs.ndim - 1)
+        if not isinstance(self.model, GaussianCnn):
+            model_in = torch.cat([obs, action], dim=obs.ndim - 1)
+        else: 
+            model_in = (obs, action)
+            self.input_normalizer = False
         if self.input_normalizer:
             # Normalizer lives on device
             model_in = self.input_normalizer.normalize(model_in).float().to(self.device)
@@ -131,9 +136,13 @@ class OneDTransitionRewardModel(Model):
         target_obs = model_util.to_tensor(target_obs).to(self.device)
 
         model_in = self._get_model_input(obs, action)
-        if self.learned_rewards:
+        if self.learned_rewards and not isinstance(self.model, GaussianCnn):
             reward = model_util.to_tensor(reward).to(self.device).unsqueeze(reward.ndim)
             target = torch.cat([target_obs, reward], dim=obs.ndim - 1)
+        elif self.learned_rewards and isinstance(self.model, GaussianCnn):
+            reward = model_util.to_tensor(reward).to(self.device).unsqueeze(reward.ndim)
+            target = (target_obs, reward)
+            return model_in, target
         else:
             target = target_obs
         return model_in.float(), target.float()
@@ -161,8 +170,12 @@ class OneDTransitionRewardModel(Model):
             action = action[None, :]
         if self.obs_process_fn:
             obs = self.obs_process_fn(obs)
-        model_in_np = np.concatenate([obs, action], axis=obs.ndim - 1)
-        self.input_normalizer.update_stats(model_in_np)
+        if self.model.cnn_ensemble:
+            model_in_np = (obs, action)
+
+        else:
+            model_in_np = np.concatenate([obs, action], axis=obs.ndim - 1)
+            self.input_normalizer.update_stats(model_in_np)
 
     def loss(
         self,
