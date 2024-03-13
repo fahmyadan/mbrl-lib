@@ -1,0 +1,14 @@
+# @package _group_
+_target_: mbrl.models.GaussianCnn
+device: ${device}
+num_layers: 4
+in_size: ???
+out_size: ???
+input_channels: ${overrides.env_args.observation.stack_size}
+action_dim: 2
+latent_size: 256
+ensemble_size: 5
+hid_size: 200
+deterministic: false
+activation_fn_cfg:
+  _target_: torch.nn.ReLU
