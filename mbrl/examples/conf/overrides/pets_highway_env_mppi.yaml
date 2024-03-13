@@ -1,0 +1,51 @@
+# @package _group_
+env: "intersection-v0"
+logging:
+  wandb: true
+  project_name: 'Highway_env'
+  tensorboard_log: 'logs'
+
+env_args:
+  _target_: mbrl.planning.TrajectoryOptimizerAgent
+  offroad_terminal: true
+  destination: 'o1'
+  initial_vehicle_count: 0
+  spawn_probability: 0
+  collision_reward: -10
+  on_road_reward: 1 
+  path_reward: 0
+  arrived_reward: 10
+  observation:
+    type: Kinematics
+    features:
+      - presence
+      - x
+      - y
+      - vx
+      - vy
+      - lane_id
+      - heading
+    absolute: false
+  action: 
+    type: ContinuousAction
+
+obs_process_fn: mbrl.env.observation_fns.highway_env
+learned_rewards: false
+trial_length: 20
+num_steps: 500
+
+num_elites: 5
+model_lr: 7.5e-4
+model_wd: 3e-5
+model_batch_size: 256
+validation_ratio: 0
+freq_train_model: 50
+patience: 25
+num_epochs_train_model: 25
+
+planning_horizon: 20
+mppi_num_iters: 5
+mppi_population_size: 350
+mppi_gamma: 0.9
+mppi_sigma: 1.0
+mppi_beta: 0.9
