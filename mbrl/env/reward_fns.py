@@ -56,6 +56,8 @@ def pusher(act: torch.Tensor, next_obs: torch.Tensor) -> torch.Tensor:
 
 def highway_env(act: torch.Tensor, next_obs: torch.Tensor, veh_obj= None, collision_threshold=2.0,) -> torch.Tensor:
 
+    lane_width = 4
+
     ego_obs = next_obs[:, :7]
     other_vehs = next_obs[:, 7:]
     other_vehs = other_vehs.view(other_vehs.shape[0], -1,ego_obs.shape[1])
@@ -78,8 +80,9 @@ def highway_env(act: torch.Tensor, next_obs: torch.Tensor, veh_obj= None, collis
 
     min_distance = torch.min(distance, dim = 1)
     sq_error = min_distance.values **2 
+    sq_thld = sq_error < lane_width /2
 
-    reward = -1 * collision_mask.sum(dim=1) - sq_error
+    reward = -1 * collision_mask.sum(dim=1) + 1 * sq_thld
 
     return reward.unsqueeze(-1)
 
