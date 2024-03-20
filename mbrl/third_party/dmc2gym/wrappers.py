@@ -1,7 +1,7 @@
 import numpy as np
 from dm_control import suite
 from dm_env import specs
-from gym import core, spaces
+from gymnasium import core, spaces
 
 from mbrl.util.math import quantize_obs
 
@@ -112,6 +112,7 @@ class DMCWrapper(core.Env):
                 )
         else:
             obs = _flatten_obs(time_step.observation)
+        
         return obs
 
     def _convert_action(self, action):
