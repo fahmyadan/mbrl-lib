@@ -1,0 +1,56 @@
+# @package _group_
+env: "intersection-v0"
+logging:
+  wandb: false
+  project_name: 'Highway_env'
+  tensorboard_log: 'logs'
+
+
+env_args:
+  _target_: mbrl.planning.TrajectoryOptimizerAgent
+  offroad_terminal: false
+  destination: 'o1'
+  initial_vehicle_count: 0
+  spawn_probability: 0
+  collision_reward: -10
+  on_road_reward: 1 
+  path_reward: 0
+  arrived_reward: 10
+  observation:
+    type: GrayscaleObservation
+    observation_shape: [128, 128]
+    stack_size: 4
+    weights: [0.2989, 0.5870, 0.1140]
+    scaling: 1.75
+    # features:
+    #   - presence
+    #   - x
+    #   - y
+    #   - vx
+    #   - vy
+    #   - lane_id
+    #   - heading
+    # absolute: false
+  action: 
+    type: ContinuousAction
+
+term_fn: "no_termination"
+
+# General configuration overrides
+trial_length: 20
+action_noise_std: 0.3
+
+# Model overrides
+num_grad_updates: 100
+sequence_length: 10
+batch_size: 20
+free_nats: 3
+kl_scale: 1.0
+
+# Planner configuration overrides
+planning_horizon: 12
+cem_num_iters: 10
+cem_elite_ratio: 0.1
+cem_population_size: 1000
+cem_alpha: 0.0
+cem_clipped_normal: true
