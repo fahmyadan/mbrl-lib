@@ -467,6 +467,7 @@ class PlaNetModel(Model):
             kl_loss = kl_loss.mean()
             meta = {
                 "reconstruction": pred_next_obs.detach(),
+                "target_obs": obs[:, 1:].detach(),
                 "observations_loss": obs_loss.item(),
                 "reward_loss": reward_loss.item(),
                 "kl_loss": kl_loss.item(),
@@ -527,6 +528,10 @@ class PlaNetModel(Model):
         """
         with torch.no_grad():
             return self.loss(batch, reduce=False)
+
+    
+
+
 
     def sample(
         self,
