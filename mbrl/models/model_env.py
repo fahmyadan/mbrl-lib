@@ -139,7 +139,8 @@ class ModelEnv:
                 )
 
             if isinstance(self.env.unwrapped, IntersectionEnv):
-                dones = self.termination_fn(actions, next_observs, self.env)
+                # dones = self.termination_fn(actions, next_observs, self.env)
+                dones = self.termination_fn(actions, next_observs)
             else:
                 dones = self.termination_fn(actions, next_observs)
 

@@ -158,8 +158,8 @@ def train(
                 target_t = np.clip(target_t * 255, 0, 255).astype(np.uint8)
 
 
-            im = Image.fromarray(seq_t)
-            im_target = Image.fromarray(target_t)
+            im = Image.fromarray(seq_t[:,:, -1])
+            im_target = Image.fromarray(target_t[:,:, -1])
             
             im.save(os.path.join(save_dir, f'reconstruction_{rand_batch}_t{t}_step{step}.png'))
             im_target.save(os.path.join(save_dir, f'target_obs{rand_batch}_t{t}_step{step}.png'))
