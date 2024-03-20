@@ -122,8 +122,48 @@ def train(
             rec_losses.append(meta["observations_loss"])
             reward_losses.append(meta["reward_loss"])
             kl_losses.append(meta["kl_loss"])
+            log_meta(meta)
             if "grad_norm" in meta:
                 grad_norms.append(meta["grad_norm"])
+    
+    def log_meta(meta, step = 1):
+        from PIL import Image
+        import random
+        import os
+        from pathlib import Path 
+        save_dir= str(Path(__file__).parents[2]) + '/recons'
+
+        if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+        
+        reconstruction = meta['reconstruction'].cpu().numpy()
+        target_obs = meta['target_obs'].cpu().numpy()
+        rand_batch = random.randint(0,reconstruction.shape[0] - 1)
+        horizon = reconstruction.shape[1]
+
+        for t in range(horizon):
+
+            seq_t = reconstruction[rand_batch, t]
+            target_t = target_obs[rand_batch,t]
+            seq_rgb = np.clip(seq_t, 0, 255).astype(np.uint8)
+
+            if seq_t.shape[0] == 1: 
+                seq_t = np.squeeze(seq_t, axis=0)
+                seq_t = (seq_t * 255).astype(np.uint8)
+            else:
+                seq_t = np.transpose(seq_t, (1, 2, 0))
+                seq_t = np.clip(seq_t * 255, 0, 255).astype(np.uint8)
+
+                target_t = np.transpose(target_t, (1, 2, 0))
+                target_t = np.clip(target_t * 255, 0, 255).astype(np.uint8)
+
+
+            im = Image.fromarray(seq_t)
+            im_target = Image.fromarray(target_t)
+            
+            im.save(os.path.join(save_dir, f'reconstruction_{rand_batch}_t{t}_step{step}.png'))
+            im_target.save(os.path.join(save_dir, f'target_obs{rand_batch}_t{t}_step{step}.png'))
+        # im.save("your_file.jpeg")
 
     def is_test_episode(episode_):
         return episode_ % cfg.algorithm.test_frequency == 0
