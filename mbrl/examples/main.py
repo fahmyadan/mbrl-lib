@@ -19,7 +19,7 @@ def run(cfg: omegaconf.DictConfig):
     env, term_fn, reward_fn = mbrl.util.env.EnvHandler.make_env(cfg)
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
-    if cfg.overrides.logging.wandb:
+    if cfg.overrides.get('logging', None) and cfg.overrides.logging.get('wandb', None):
         wandb_cfg = omegaconf.OmegaConf.to_container(cfg.overrides)
         wandb_run = wandb.init(project= cfg.overrides.logging.project_name, config=wandb_cfg, sync_tensorboard=True, monitor_gym=True)
         wanb_cbs = [WandbCallback('loss'), WandbCallback('reward')]
