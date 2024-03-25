@@ -16,7 +16,7 @@ from tqdm import tqdm
 import mbrl.constants
 from mbrl.env.termination_fns import no_termination
 from mbrl.models import ModelEnv, ModelTrainer
-from mbrl.planning import RandomAgent, create_trajectory_optim_agent_for_model
+from mbrl.planning import RandomAgent, create_trajectory_optim_agent_for_model, MPPIAgent
 from mbrl.util import Logger
 from mbrl.util.common import (
     create_replay_buffer,
@@ -76,7 +76,8 @@ def train(
     rollout_agent_trajectories(
         env,
         cfg.algorithm.num_initial_trajectories,
-        RandomAgent(env),
+        MPPIAgent(env, **omegaconf.OmegaConf.to_container(cfg.overrides.mppi)), 
+        #RandomAgent(env),
         agent_kwargs={},
         replay_buffer=replay_buffer,
         collect_full_trajectories=True,

@@ -8,7 +8,7 @@ logging:
 
 env_args:
   _target_: mbrl.planning.TrajectoryOptimizerAgent
-  offroad_terminal: false
+  offroad_terminal: true
   destination: 'o1'
   initial_vehicle_count: 0
   spawn_probability: 0
@@ -16,6 +16,12 @@ env_args:
   on_road_reward: 1 
   path_reward: 0
   arrived_reward: 10
+  simulation_frequency: 10
+  policy_frequency: 5
+  # ego_lane: [
+  #           ["o2", "ir2", 0],
+  #           ["o1", "ir1", 0]
+  #         ]
   observation:
     type: GrayscaleObservation
     observation_shape: [128, 128]
@@ -37,12 +43,12 @@ env_args:
 term_fn: "no_termination"
 
 # General configuration overrides
-trial_length: 20
+trial_length: 100
 action_noise_std: 0.3
 
 # Model overrides
 num_grad_updates: 100
-sequence_length: 10
+sequence_length: 30
 batch_size: 20
 free_nats: 3
 kl_scale: 1.0
@@ -54,3 +60,15 @@ cem_elite_ratio: 0.1
 cem_population_size: 1000
 cem_alpha: 0.0
 cem_clipped_normal: true
+
+mppi:
+  nx : 4
+  noise_sigma: [[5, 0],[0,0.7]]
+  noise_mu : [0, 0]
+  u_min: [-5, -0.7]
+  u_max: [5, 0.5]
+  horizon: 15 
+  num_samples : 500
+  lambda_: 2000
+
+
