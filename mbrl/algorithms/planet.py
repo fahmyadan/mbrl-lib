@@ -66,13 +66,27 @@ def train(
     np_rng = np.random.default_rng(seed=cfg.seed)
 
     # Create replay buffer and collect initial data
-    replay_buffer = create_replay_buffer(
-        cfg,
-        env.observation_space.shape,
-        env.action_space.shape,
-        collect_trajectories=True,
-        rng=np_rng,
-    )
+    if not isinstance(env.observation_space, gym.spaces.tuple.Tuple):
+        replay_buffer = create_replay_buffer(
+            cfg,
+            env.observation_space.shape,
+            env.action_space.shape,
+            collect_trajectories=True,
+            rng=np_rng,
+        )
+    else: 
+        tuple_space = [obs_space.shape for obs_space in env.observation_space.spaces]
+
+        replay_buffer = create_replay_buffer(
+            cfg,
+            tuple_space,
+            env.action_space.shape,
+            collect_trajectories=True,
+            rng=np_rng,
+            tuple_obs= True
+        )
+
+        
     rollout_agent_trajectories(
         env,
         cfg.algorithm.num_initial_trajectories,

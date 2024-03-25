@@ -705,3 +705,32 @@ class ReplayBuffer:
     @property
     def rng(self) -> np.random.Generator:
         return self._rng
+
+class TupleReplay(ReplayBuffer):
+
+    def __init__(
+        self,
+        capacity: int,
+        obs_shape: Sequence[int],
+        action_shape: Sequence[int],
+        obs_type: Type = np.float32,
+        action_type: Type = np.float32,
+        reward_type: Type = np.float32,
+        rng: Optional[np.random.Generator] = None,
+        max_trajectory_length: Optional[int] = None,
+    ):
+
+        super().__init__(
+            capacity,
+            obs_shape[0],
+            action_shape,
+            obs_type,
+            action_type,
+            reward_type,
+            rng,
+            max_trajectory_length)
+        
+        if max_trajectory_length:
+            self.trajectory_indices = []
+            capacity += max_trajectory_length
+        self.obs = [np.empty((capacity, *shape), dtype=obs_type) for shape in obs_shape]

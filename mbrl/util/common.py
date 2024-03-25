@@ -20,6 +20,7 @@ from .replay_buffer import (
     SequenceTransitionIterator,
     SequenceTransitionSampler,
     TransitionIterator,
+    TupleReplay
 )
 
 
@@ -147,6 +148,7 @@ def create_replay_buffer(
     load_dir: Optional[Union[str, pathlib.Path]] = None,
     collect_trajectories: bool = False,
     rng: Optional[np.random.Generator] = None,
+    tuple_obs: bool = False
 ) -> ReplayBuffer:
     """Creates a replay buffer from a given configuration.
 
@@ -195,16 +197,29 @@ def create_replay_buffer(
             )
         maybe_max_trajectory_len = cfg.overrides.trial_length
 
-    replay_buffer = ReplayBuffer(
-        dataset_size,
-        obs_shape,
-        act_shape,
-        obs_type=obs_type,
-        action_type=action_type,
-        reward_type=reward_type,
-        rng=rng,
-        max_trajectory_length=maybe_max_trajectory_len,
-    )
+    if  tuple_obs:
+        replay_buffer = TupleReplay(
+            dataset_size,
+            obs_shape,
+            act_shape,
+            obs_type=obs_type,
+            action_type=action_type,
+            reward_type=reward_type,
+            rng=rng,
+            max_trajectory_length=maybe_max_trajectory_len,
+        )
+    else:
+        replay_buffer = ReplayBuffer(
+            dataset_size,
+            obs_shape,
+            act_shape,
+            obs_type=obs_type,
+            action_type=action_type,
+            reward_type=reward_type,
+            rng=rng,
+            max_trajectory_length=maybe_max_trajectory_len,
+        )
+    
 
     if load_dir:
         load_dir = pathlib.Path(load_dir)

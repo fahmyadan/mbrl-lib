@@ -23,20 +23,30 @@ env_args:
   #           ["o1", "ir1", 0]
   #         ]
   observation:
-    type: GrayscaleObservation
-    observation_shape: [128, 128]
-    stack_size: 4
-    weights: [0.2989, 0.5870, 0.1140]
-    scaling: 1.75
-    # features:
-    #   - presence
-    #   - x
-    #   - y
-    #   - vx
-    #   - vy
-    #   - lane_id
-    #   - heading
-    # absolute: false
+    type: TupleObservation
+    observation_configs:
+      - type: GrayscaleObservation
+        observation_shape: [128, 128]
+        stack_size: 4
+        weights: [0.2989, 0.5870, 0.1140] 
+        scaling: 1.75
+
+      - type: Kinematics
+        features:
+          - presence
+          - x
+          - y
+          - vx
+          - vy
+          - lane_id
+          - heading
+        absolute: false
+        features_range: 
+            x: [0, 0]
+            y: [0, 0]
+            vx: [-20, 20]
+            vy: [-20, 20]
+        
   action: 
     type: ContinuousAction
 
@@ -54,12 +64,18 @@ free_nats: 3
 kl_scale: 1.0
 
 # Planner configuration overrides
-planning_horizon: 12
-cem_num_iters: 10
-cem_elite_ratio: 0.1
-cem_population_size: 1000
-cem_alpha: 0.0
-cem_clipped_normal: true
+planning_horizon: 30
+mppi_num_iters: 5
+mppi_population_size: 350
+mppi_gamma: 0.9
+mppi_sigma: 1.0
+mppi_beta: 0.9
+# planning_horizon: 12
+# cem_num_iters: 10
+# cem_elite_ratio: 0.1
+# cem_population_size: 1000
+# cem_alpha: 0.0
+# cem_clipped_normal: true
 
 mppi:
   nx : 4
