@@ -36,10 +36,10 @@ env_args:
           - presence
           - x
           - y
+          - heading
           - vx
           - vy
           - lane_id
-          - heading
         absolute: false
         features_range: 
             x: [0, 0]
