@@ -208,7 +208,10 @@ def complete_agent_cfg(
         *will not* be overridden by this function.
 
     """
-    obs_shape = env.observation_space.shape
+    if not isinstance(env.observation_space, gym.spaces.tuple.Tuple):
+        obs_shape = env.observation_space.shape
+    else:
+        obs_shape = env.observation_space.spaces[1].shape
     act_shape = env.action_space.shape
 
     def _check_and_replace(key: str, value: Any, cfg: omegaconf.DictConfig):

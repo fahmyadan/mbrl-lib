@@ -197,7 +197,7 @@ def create_replay_buffer(
             )
         maybe_max_trajectory_len = cfg.overrides.trial_length
 
-    if  tuple_obs:
+    if tuple_obs:
         replay_buffer = TupleReplay(
             dataset_size,
             obs_shape,

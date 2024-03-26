@@ -283,7 +283,11 @@ class PlaNetModel(Model):
         # sequence iterator samples full sequences, so `dones` not necessary either
         obs, action, _, rewards, _, _ = super()._process_batch(batch, as_float=as_float)
         if pixel_obs:
-            obs = self._process_pixel_obs(obs)
+            if isinstance(obs, list):
+
+                obs[0] = self._process_pixel_obs(obs[0]) 
+            else:
+                obs = self._process_pixel_obs(obs)
         return obs, action, rewards
 
     def _sample_state_from_params(

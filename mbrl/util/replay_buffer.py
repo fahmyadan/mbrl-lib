@@ -734,3 +734,67 @@ class TupleReplay(ReplayBuffer):
             self.trajectory_indices = []
             capacity += max_trajectory_length
         self.obs = [np.empty((capacity, *shape), dtype=obs_type) for shape in obs_shape]
+        self.next_obs = [np.empty((capacity, *shape), dtype=obs_type) for shape in obs_shape]
+    
+
+    def add(
+        self,
+        obs: np.ndarray,
+        action: np.ndarray,
+        next_obs: np.ndarray,
+        reward: float,
+        terminated: bool,
+        truncated: bool,
+    ):
+        """Adds a transition (s, a, s', r, terminated) to the replay buffer.
+
+        Args:
+            obs (np.ndarray): the observation at time t.
+            action (np.ndarray): the action at time t.
+            next_obs (np.ndarray): the observation at time t + 1.
+            reward (float): the reward at time t + 1.
+            terminated (bool): a boolean indicating whether the episode ended in a terminal state.
+            truncated (bool): a boolean indicating whether the episode ended prematurely.
+        """
+        img_obs, kin_obs  = obs 
+        img_next , kin_next = next_obs
+        img_idx , kin_idx = 0, 1
+        self.obs[img_idx][self.cur_idx] = img_obs
+        self.obs[kin_idx][self.cur_idx] = kin_obs
+        # self.obs[self.cur_idx] = obs
+        self.next_obs[img_idx][self.cur_idx] = img_next
+        self.next_obs[kin_idx][self.cur_idx] = kin_next
+        #self.next_obs[self.cur_idx] = next_obs
+        self.action[self.cur_idx] = action
+        self.reward[self.cur_idx] = reward
+        self.terminated[self.cur_idx] = terminated
+        self.truncated[self.cur_idx] = truncated
+
+        if self.trajectory_indices is not None:
+            self._trajectory_bookkeeping(terminated or truncated)
+        else:
+            self.cur_idx = (self.cur_idx + 1) % self.capacity
+            self.num_stored = min(self.num_stored + 1, self.capacity)
+    
+
+    def _trajectory_bookkeeping(self, terminated: bool):
+        self.cur_idx += 1
+        if self.num_stored < self.capacity:
+            self.num_stored += 1
+        if self.cur_idx >= self.capacity:
+            self.num_stored = max(self.num_stored, self.cur_idx)
+        if terminated:
+            self.close_trajectory()
+        else:
+            partial_trajectory = (self._start_last_trajectory, self.cur_idx + 1)
+            self.remove_overlapping_trajectories(partial_trajectory)
+        if self.cur_idx >= len(self.obs[0]) or self.cur_idx >= len(self.obs[1]) :
+            warnings.warn(
+                "The replay buffer was filled before current trajectory finished. "
+                "The history of the current partial trajectory will be discarded. "
+                "Make sure you set `max_trajectory_length` to the appropriate value "
+                "for your problem."
+            )
+            self._start_last_trajectory = 0
+            self.cur_idx = 0
+            self.num_stored = len(self.obs)

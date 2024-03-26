@@ -57,15 +57,25 @@ class Model(nn.Module, abc.ABC):
             if as_float:
                 return res.float()
             return res
+        if not isinstance(batch.obs, list):
+            return (
+                _convert(batch.obs),
+                _convert(batch.act),
+                _convert(batch.next_obs),
+                None if batch.rewards is None else _convert(batch.rewards),
+                None if batch.terminateds is None else _convert(batch.terminateds),
+                None if batch.truncateds is None else _convert(batch.truncateds),
+            )
+        else:
 
-        return (
-            _convert(batch.obs),
-            _convert(batch.act),
-            _convert(batch.next_obs),
-            None if batch.rewards is None else _convert(batch.rewards),
-            None if batch.terminateds is None else _convert(batch.terminateds),
-            None if batch.truncateds is None else _convert(batch.truncateds),
-        )
+            return (
+                [torch.Tensor(t).to(self.device) for t in batch.obs],
+                _convert(batch.act),
+                [torch.Tensor(t).to(self.device) for t in batch.next_obs],
+                None if batch.rewards is None else _convert(batch.rewards),
+                None if batch.terminateds is None else _convert(batch.terminateds),
+                None if batch.truncateds is None else _convert(batch.truncateds), 
+            )
 
     def forward(self, x: torch.Tensor, *args, **kwargs) -> Tuple[torch.Tensor, ...]:
         """Computes the output of the dynamics model.

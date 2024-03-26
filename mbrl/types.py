@@ -31,7 +31,14 @@ class TransitionBatch:
     truncateds: Optional[TensorType]
 
     def __len__(self):
-        return self.obs.shape[0]
+        if isinstance(self.obs, list):
+            return self.obs[0].shape[0]
+        elif isinstance(self.obs, TensorType):
+            return self.obs.shape[0]
+        else:
+            return 0
+
+        
 
     def astuple(self) -> Transition:
         return (
@@ -44,14 +51,26 @@ class TransitionBatch:
         )
 
     def __getitem__(self, item):
-        return TransitionBatch(
-            self.obs[item],
-            self.act[item],
-            self.next_obs[item],
-            self.rewards[item],
-            self.terminateds[item],
-            self.truncateds[item],
+
+        if isinstance(self.obs, TensorType) and isinstance(self.next_obs, TensorType):
+            return TransitionBatch(
+                self.obs[item],
+                self.act[item],
+                self.next_obs[item],
+                self.rewards[item],
+                self.terminateds[item],
+                self.truncateds[item],
         )
+        else: 
+            return TransitionBatch(
+                [self.obs[idx][item] for idx in range(len(self.obs))],
+                self.act[item],
+                [self.next_obs[idx][item] for idx in range(len(self.next_obs))],
+                self.rewards[item],
+                self.terminateds[item],
+                self.truncateds[item],
+        )
+
 
     @staticmethod
     def _get_new_shape(old_shape: Tuple[int, ...], batch_size: int):
@@ -66,18 +85,33 @@ class TransitionBatch:
                 "Current batch of transitions size is not a "
                 "multiple of the new batch size. "
             )
-        return TransitionBatch(
-            self.obs.reshape(self._get_new_shape(self.obs.shape, batch_size)),
-            self.act.reshape(self._get_new_shape(self.act.shape, batch_size)),
-            self.next_obs.reshape(self._get_new_shape(self.obs.shape, batch_size)),
-            self.rewards.reshape(self._get_new_shape(self.rewards.shape, batch_size)),
-            self.terminateds.reshape(
-                self._get_new_shape(self.terminateds.shape, batch_size)
-            ),
-            self.truncateds.reshape(
-                self._get_new_shape(self.truncateds.shape, batch_size)
-            ),
-        )
+
+        if isinstance(self.obs, TensorType) and isinstance(self.next_obs, TensorType): 
+            return TransitionBatch(
+                self.obs.reshape(self._get_new_shape(self.obs.shape, batch_size)),
+                self.act.reshape(self._get_new_shape(self.act.shape, batch_size)),
+                self.next_obs.reshape(self._get_new_shape(self.obs.shape, batch_size)),
+                self.rewards.reshape(self._get_new_shape(self.rewards.shape, batch_size)),
+                self.terminateds.reshape(
+                    self._get_new_shape(self.terminateds.shape, batch_size)
+                ),
+                self.truncateds.reshape(
+                    self._get_new_shape(self.truncateds.shape, batch_size)
+                ),
+            )
+        else: 
+            return TransitionBatch(
+                [self.obs[idx].reshape(self._get_new_shape(self.obs[idx].shape, batch_size)) for idx in range(len(self.obs))],
+                self.act.reshape(self._get_new_shape(self.act.shape, batch_size)),
+                [self.next_obs[idx].reshape(self._get_new_shape(self.obs[idx].shape, batch_size)) for idx in range(len(self.obs))],
+                self.rewards.reshape(self._get_new_shape(self.rewards.shape, batch_size)),
+                self.terminateds.reshape(
+                    self._get_new_shape(self.terminateds.shape, batch_size)
+                ),
+                self.truncateds.reshape(
+                    self._get_new_shape(self.truncateds.shape, batch_size)
+                ),
+            )
 
 
 ModelInput = Union[torch.Tensor, TransitionBatch]
