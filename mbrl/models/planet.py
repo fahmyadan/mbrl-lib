@@ -432,15 +432,30 @@ class PlaNetModel(Model):
         """
         obs, action, rewards = self._process_batch(batch, pixel_obs=True)
 
-        (
-            prior_dist_params,
-            prior_states,
-            posterior_dist_params,
-            posterior_states,
-            beliefs,
-            pred_next_obs,
-            pred_rewards,
-        ) = self.forward(obs[:, 1:], action[:, :-1], rewards[:, :-1])
+        if not isinstance(obs, list):
+
+            (
+                prior_dist_params,
+                prior_states,
+                posterior_dist_params,
+                posterior_states,
+                beliefs,
+                pred_next_obs,
+                pred_rewards,
+            ) = self.forward(obs[:, 1:], action[:, :-1], rewards[:, :-1])
+        else: 
+            #TODO: Fix planet model to deal with multiple inputs (image and vector).
+            (
+                prior_dist_params,
+                prior_states,
+                posterior_dist_params,
+                posterior_states,
+                beliefs,
+                pred_next_obs,
+                pred_rewards,
+            ) 
+
+
 
         obs_loss = F.mse_loss(pred_next_obs, obs[:, 1:], reduction="none").sum(
             (2, 3, 4)
