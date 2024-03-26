@@ -325,10 +325,16 @@ class PlaNetModel(Model):
         torch.Tensor,
         torch.Tensor,
     ]:
+        
         next_belief = self.belief_model(
             current_latent_state, current_action, current_belief
         )
-        obs_encoding = self.encoder.forward(obs)
+        if not isinstance(obs, list):
+            obs_encoding = self.encoder.forward(obs)
+        else:
+            #TODO: Fix planet model to deal with multiple inputs (image and vector).
+            obs_encoding = self.encoder.forward(obs[0])
+
         posterior_dist_params = self.posterior_transition_model(
             torch.cat([next_belief, obs_encoding], dim=1)
         )
@@ -363,28 +369,51 @@ class PlaNetModel(Model):
         *args,
         **kwargs
     ) -> Tuple[torch.Tensor, ...]:
-        batch_size, trajectory_length, *_ = next_obs.shape
+        if not isinstance(next_obs, list):
+            batch_size, trajectory_length, *_ = next_obs.shape
+        else:
+            batch_size, trajectory_length, *_ = next_obs[0].shape
+
         states_and_beliefs = StatesAndBeliefs()  # this will collect all the variables
         current_latent_state = torch.zeros(
             batch_size, self.latent_state_size, device=self.device
         )
         current_belief = torch.zeros(batch_size, self.belief_size, device=self.device)
-        pred_next_obs = torch.empty_like(next_obs)
+
+        if isinstance(next_obs, list):
+            img_pred_next_obs, kin_pred_next_obs = [torch.empty_like(k_obs) for k_obs in next_obs]
+        else:
+            pred_next_obs = torch.empty_like(next_obs)
         pred_rewards = torch.empty_like(rewards)
         for t_step in range(trajectory_length):
             current_action = action[:, t_step]
-            (
-                prior_dist_params,
-                prior_sample,
-                posterior_dist_params,
-                posterior_sample,
-                next_belief,
-            ) = self._forward_transition_models(
-                next_obs[:, t_step],
-                current_action,
-                current_latent_state,
-                current_belief,
-            )
+            if not isinstance(next_obs, list):
+                (
+                    prior_dist_params,
+                    prior_sample,
+                    posterior_dist_params,
+                    posterior_sample,
+                    next_belief,
+                ) = self._forward_transition_models(
+                    next_obs[:, t_step],
+                    current_action,
+                    current_latent_state,
+                    current_belief,
+                )
+            else:
+                (
+                    prior_dist_params,
+                    prior_sample,
+                    posterior_dist_params,
+                    posterior_sample,
+                    next_belief,
+                ) = self._forward_transition_models(
+                    [v[:, t_step] for v in next_obs],
+                    current_action,
+                    current_latent_state,
+                    current_belief,
+                )
+
             pred_next_obs[:, t_step] = self._forward_decoder(
                 posterior_sample, next_belief
             )
@@ -444,7 +473,7 @@ class PlaNetModel(Model):
                 pred_rewards,
             ) = self.forward(obs[:, 1:], action[:, :-1], rewards[:, :-1])
         else: 
-            #TODO: Fix planet model to deal with multiple inputs (image and vector).
+            
             (
                 prior_dist_params,
                 prior_states,
@@ -453,7 +482,7 @@ class PlaNetModel(Model):
                 beliefs,
                 pred_next_obs,
                 pred_rewards,
-            ) 
+            ) = self.forward([v[:, 1:] for v in obs], action[:, :-1], rewards[:, :-1])
 
 
 
