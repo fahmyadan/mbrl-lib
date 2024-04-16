@@ -210,6 +210,7 @@ class PlaNetModel(Model):
         kl_scale: float = 1.0,
         grad_clip_norm: float = 1000.0,
         rng: Optional[torch.Generator] = None,
+        vec_input: int = None
     ):
         super().__init__(device)
         self.obs_shape = obs_shape
@@ -221,6 +222,7 @@ class PlaNetModel(Model):
         self.kl_scale = kl_scale
         self.grad_clip_norm = grad_clip_norm
         self.rng = torch.Generator(device=self.device) if rng is None else rng
+        self.vec_input = vec_input
 
         # Computes ht = f(ht-1, st-1, at-1)
         #   st-1, at-1 --> Linear --> ht-1 --> RNN --> ht
@@ -242,10 +244,14 @@ class PlaNetModel(Model):
             self.obs_shape[1:],
             obs_encoding_size,
         )
+        self.vec_encoder = nn.Sequential(
+            nn.Linear(vec_input, vec_input), 
+            nn.ReLU()  
+        )
 
         # (o_hat_t, h_t) --> [MLP] --> s_t (mean and std)
         self.posterior_transition_model = nn.Sequential(
-            nn.Linear(obs_encoding_size + belief_size, hidden_size_fcs),
+            nn.Linear(obs_encoding_size + belief_size+ vec_input, hidden_size_fcs),
             nn.ReLU(),
             nn.Linear(hidden_size_fcs, 2 * latent_state_size),
             MeanStdCat(latent_state_size, min_std),
@@ -254,6 +260,13 @@ class PlaNetModel(Model):
         # ---------- This is p(ot| ht, st) (observation model) ------------
         self.decoder = Conv2dDecoder(
             latent_state_size + belief_size, decoder_config[0], decoder_config[1]
+        )
+        self.vec_decoder = nn.Sequential(
+            nn.Linear(latent_state_size + belief_size, 50), 
+            nn.ReLU(), 
+            nn.Linear(50, 20),
+            nn.ReLU(), 
+            nn.Linear(20, vec_input)
         )
 
         self.reward_model = nn.Sequential(
@@ -334,9 +347,11 @@ class PlaNetModel(Model):
         else:
             #TODO: Fix planet model to deal with multiple inputs (image and vector).
             obs_encoding = self.encoder.forward(obs[0])
+            ego_obs = obs[1][:,0, 1:6]  #x, y, theta, vx, vy
+            vec_encoding  = self.vec_encoder(ego_obs)
 
         posterior_dist_params = self.posterior_transition_model(
-            torch.cat([next_belief, obs_encoding], dim=1)
+            torch.cat([next_belief, obs_encoding, vec_encoding], dim=1)
         )
         posterior_sample = self._sample_state_from_params(
             posterior_dist_params, self.rng if rng is None else rng
@@ -356,6 +371,10 @@ class PlaNetModel(Model):
             next_belief,
         )
 
+    def _forward_vec_decoder(self, state_sample: torch.Tensor, belief: torch.Tensor):
+        decoder_input = torch.cat([state_sample, belief], dim=-1)
+        return self.decoder(decoder_input), self.vec_decoder(decoder_input)
+    
     def _forward_decoder(self, state_sample: torch.Tensor, belief: torch.Tensor):
         decoder_input = torch.cat([state_sample, belief], dim=-1)
         return self.decoder(decoder_input)
@@ -381,7 +400,10 @@ class PlaNetModel(Model):
         current_belief = torch.zeros(batch_size, self.belief_size, device=self.device)
 
         if isinstance(next_obs, list):
-            img_pred_next_obs, kin_pred_next_obs = [torch.empty_like(k_obs) for k_obs in next_obs]
+            #img_pred_next_obs, kin_pred_next_obs = [torch.empty_like(k_obs) for k_obs in next_obs]
+            img_pred_next_obs = torch.empty_like(next_obs[0])
+            kin_pred_next_obs = torch.empty_like(next_obs[1][:,:,0, 1:6])
+
         else:
             pred_next_obs = torch.empty_like(next_obs)
         pred_rewards = torch.empty_like(rewards)
@@ -400,6 +422,9 @@ class PlaNetModel(Model):
                     current_latent_state,
                     current_belief,
                 )
+                pred_next_obs[:, t_step] = self._forward_decoder(
+                posterior_sample, next_belief
+            )
             else:
                 (
                     prior_dist_params,
@@ -413,10 +438,11 @@ class PlaNetModel(Model):
                     current_latent_state,
                     current_belief,
                 )
+                #posterior dist represents q distribution (variational)
 
-            pred_next_obs[:, t_step] = self._forward_decoder(
-                posterior_sample, next_belief
-            )
+                img_pred_next_obs[:,t_step], kin_pred_next_obs[:,t_step] = self._forward_vec_decoder(posterior_sample, next_belief)
+                #decoder captures the observation model p(o|...)
+
             pred_rewards[:, t_step] = self.reward_model(
                 torch.cat([next_belief, posterior_sample], dim=1)
             ).squeeze()
@@ -433,6 +459,10 @@ class PlaNetModel(Model):
                 posterior_state=posterior_sample,
                 belief=next_belief,
             )
+        
+        if isinstance(next_obs, list):
+            return states_and_beliefs.as_stacked_tuple() + (img_pred_next_obs, kin_pred_next_obs, pred_rewards)
+        
 
         return states_and_beliefs.as_stacked_tuple() + (pred_next_obs, pred_rewards)
 
@@ -472,6 +502,10 @@ class PlaNetModel(Model):
                 pred_next_obs,
                 pred_rewards,
             ) = self.forward(obs[:, 1:], action[:, :-1], rewards[:, :-1])
+            
+            obs_loss = F.mse_loss(pred_next_obs, obs[:, 1:], reduction="none").sum(
+            (2, 3, 4)
+        )
         else: 
             
             (
@@ -480,15 +514,17 @@ class PlaNetModel(Model):
                 posterior_dist_params,
                 posterior_states,
                 beliefs,
-                pred_next_obs,
+                pred_next_img,
+                pred_next_kin, 
                 pred_rewards,
             ) = self.forward([v[:, 1:] for v in obs], action[:, :-1], rewards[:, :-1])
 
+            img_loss = F.mse_loss(pred_next_img, obs[0][:, 1:], reduction="none").sum((2, 3, 4))
+            kin_loss = F.mse_loss(pred_next_kin, obs[1][:,1:, 0, 1:6], reduction="none").sum(dim=-1)  #x, y, theta, vx, vy
 
 
-        obs_loss = F.mse_loss(pred_next_obs, obs[:, 1:], reduction="none").sum(
-            (2, 3, 4)
-        )
+
+        
         reward_loss = F.mse_loss(pred_rewards, rewards[:, :-1], reduction="none")
 
         # ------------------ Computing KL[q || p] ------------------
@@ -510,13 +546,16 @@ class PlaNetModel(Model):
         )
 
         if reduce:
-            obs_loss = obs_loss.mean()
+            img_loss = img_loss.mean()
+            kin_loss = kin_loss.mean()
             reward_loss = reward_loss.mean()
             kl_loss = kl_loss.mean()
             meta = {
-                "reconstruction": pred_next_obs.detach(),
-                "target_obs": obs[:, 1:].detach(),
-                "observations_loss": obs_loss.item(),
+                "img_reconstruction": pred_next_img.detach(),
+                "kinematic_reconstruction": pred_next_kin.detach(),
+                "target_obs_img": obs[0][:, 1:].detach(),
+                "img_loss": img_loss.item(),
+                "kinematic_loss" : kin_loss.item(),
                 "reward_loss": reward_loss.item(),
                 "kl_loss": kl_loss.item(),
             }
@@ -528,7 +567,8 @@ class PlaNetModel(Model):
                 "kl_loss": kl_loss.detach().mean().item(),
             }
 
-        return obs_loss + reward_loss + self.kl_scale * kl_loss, meta
+        #return obs_loss + reward_loss + self.kl_scale * kl_loss, meta
+        return img_loss + kin_loss + reward_loss +  self.kl_scale * kl_loss, meta
 
     def update(
         self,
@@ -666,15 +706,16 @@ class PlaNetModel(Model):
             st+1 (from posterior), and ht+1, respectively.
         """
         with torch.no_grad():
-            assert obs.ndim == 3
-            obs = self._process_pixel_obs(obs).unsqueeze(0)
+            assert obs[0].ndim == 3
+            img_obs = self._process_pixel_obs(obs[0]).unsqueeze(0)
+            kin_obs = to_tensor(obs[1]).unsqueeze(0).to(self.device)
 
             if action is None:
                 assert (
                     self._current_posterior_sample is None
                     and self._current_belief is None
                 )
-                latent, belief, action = self._init_latent_belief_action(obs.shape[0])
+                latent, belief, action = self._init_latent_belief_action(img_obs.shape[0])
             else:
                 assert action.ndim == 1
                 action = to_tensor(action).float().to(self.device).unsqueeze(0)
@@ -686,7 +727,7 @@ class PlaNetModel(Model):
                 self._current_posterior_sample,  # posterior_sample
                 self._current_belief,  # next_belief
             ) = self._forward_transition_models(
-                obs, action, latent, belief, only_posterior=True, rng=rng
+                [img_obs, kin_obs], action, latent, belief, only_posterior=True, rng=rng
             )
             return {
                 "latent": self._current_posterior_sample,

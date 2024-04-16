@@ -115,6 +115,7 @@ def train(
 
     # Callback and containers to accumulate training statistics and average over batch
     rec_losses: List[float] = []
+    kin_losses = []
     reward_losses: List[float] = []
     kl_losses: List[float] = []
     grad_norms: List[float] = []
@@ -134,10 +135,11 @@ def train(
 
     def batch_callback(_epoch, _loss, meta, _mode):
         if meta:
-            rec_losses.append(meta["observations_loss"])
+            rec_losses.append(meta["img_loss"])
+            kin_losses.append(meta["kinematic_loss"])
             reward_losses.append(meta["reward_loss"])
             kl_losses.append(meta["kl_loss"])
-            log_meta(meta)
+            #log_meta(meta)
             if "grad_norm" in meta:
                 grad_norms.append(meta["grad_norm"])
     
