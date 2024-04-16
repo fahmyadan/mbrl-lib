@@ -2,6 +2,7 @@
 _target_: mbrl.models.PlaNetModel
 obs_shape: [4, 128, 128]
 obs_encoding_size: 9216 #256 * 6 * 6 
+vec_input: 5
 encoder_config:
   - [4, 32, 4, 2]
   - [32, 64, 4, 2]

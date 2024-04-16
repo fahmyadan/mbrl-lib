@@ -15,4 +15,4 @@ num_initial_trajectories: 10
 action_noise_std: 0.3
 test_frequency: 25
 num_episodes: 1000
-dataset_size: 100000
+dataset_size: 10000
