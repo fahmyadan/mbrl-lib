@@ -4,7 +4,14 @@
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/release/python-360/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
  
+ # Planet Highway Env
 
+ Run the shell script 
+ ``` bash 
+ sudo chmod +x setup.bash 
+ ./setup.bash 
+ python3 mbrl/examples/main.py algorithm=planet overrides=planet_highway_env dynamics_model=planet_hw action_optimizer=mppi
+ ```
 # MBRL-Lib
 
 ``mbrl`` is a toolbox for facilitating development of 
