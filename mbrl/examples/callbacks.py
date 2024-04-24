@@ -10,12 +10,14 @@ class WandbCallback:
 
     def __call__(self, *inputs):
         if self.type == 'reward':
-            obs, action, next_obs, reward, terminated, truncated = inputs
+            obs, action, next_obs, reward, train_ep_reward, step = inputs
             wandb.log({
-            "rollout/ep_rew_mean": reward})
+            "rollout/ep_rew_mean": reward, 
+            "rollout/ep_length": step})
+    
         elif self.type == 'loss':
 
-            model,train_iteration, epoch, total_avg_loss, eval_score, best_val_score = inputs
+            model,train_iteration, epoch, total_avg_loss, eval_score, best_val_score, meta_avg = inputs
 
             wandb.log({
                 "epoch": epoch,
@@ -23,6 +25,12 @@ class WandbCallback:
                 "loss": total_avg_loss,
                 "eval_score": eval_score,
                 "best_val_score": best_val_score
+            })
+            wandb.log({
+                "img_loss": meta_avg[0], 
+                "kinematic_loss": meta_avg[1], 
+                "reward_loss": meta_avg[-1], 
+                "kl_loss": meta_avg[-2]
             })
         else: 
             raise "Unknown logging inputs"

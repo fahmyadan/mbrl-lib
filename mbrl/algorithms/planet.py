@@ -37,6 +37,7 @@ def train(
     cfg: omegaconf.DictConfig,
     silent: bool = False,
     work_dir: Union[Optional[str], pathlib.Path] = None,
+    wandb = None 
 ) -> np.float32:
     # Experiment initialization
     debug_mode = cfg.get("debug_mode", False)
@@ -199,7 +200,7 @@ def train(
             use_simple_sampler=True,
         )
         trainer.train(
-            dataset, num_epochs=1, batch_callback=batch_callback, evaluate=False
+            dataset, num_epochs=1, batch_callback=batch_callback, evaluate=False, callback=wandb[0]
         )
         planet.save(work_dir)
         if cfg.overrides.get("save_replay_buffer", False):
@@ -246,6 +247,11 @@ def train(
                 "env_step": step,
             },
         )
+        if wandb: 
+            reward_cb = wandb[1]
+            ep_reward = episode_reward * is_test_episode(episode) 
+            train_ep_reward = episode_reward * (1 - is_test_episode(episode))
+            reward_cb(None, None, None, ep_reward, train_ep_reward, step)
 
     # returns average episode reward (e.g., to use for tuning learning curves)
     return total_rewards / cfg.algorithm.num_episodes

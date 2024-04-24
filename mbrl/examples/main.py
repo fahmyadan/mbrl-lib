@@ -31,7 +31,7 @@ def run(cfg: omegaconf.DictConfig):
         test_env, *_ = mbrl.util.env.EnvHandler.make_env(cfg)
         return mbpo.train(env, test_env, term_fn, cfg)
     if cfg.algorithm.name == "planet":
-        return planet.train(env, cfg)
+        return planet.train(env, cfg, wandb=wanb_cbs)
 
 
 if __name__ == "__main__":
