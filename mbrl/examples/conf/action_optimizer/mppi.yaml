@@ -6,6 +6,6 @@ gamma: ${overrides.mppi_gamma}
 population_size: ${overrides.mppi_population_size}
 sigma: ${overrides.mppi_sigma}
 beta: ${overrides.mppi_beta}
-lower_bound: ???
+lower_bound: ??? #TODO: Check effect of lower bound
 upper_bound: ???
 device: ${device}

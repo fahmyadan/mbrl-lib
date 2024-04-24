@@ -1,8 +1,8 @@
 # @package _group_
 env: "intersection-v0"
 logging:
-  wandb: false
-  project_name: 'Highway_env'
+  wandb: true
+  project_name: 'Planet'
   tensorboard_log: 'logs'
 
 
@@ -59,12 +59,12 @@ action_noise_std: 0.3
 # Model overrides
 num_grad_updates: 100
 sequence_length: 30
-batch_size: 20
+batch_size: 200
 free_nats: 3
 kl_scale: 1.0
 
 # Planner configuration overrides
-planning_horizon: 30
+planning_horizon: 10
 mppi_num_iters: 5
 mppi_population_size: 350
 mppi_gamma: 0.9
