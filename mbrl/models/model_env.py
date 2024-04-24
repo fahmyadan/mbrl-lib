@@ -183,12 +183,25 @@ class ModelEnv:
             population_size, horizon, action_dim = action_sequences.shape
             # either 1-D state or 3-D pixel observation
             #TODO: FIX MPPI ACTION Evaluation
-            if not isinstance(initial_state, tuple):
+  
+            if not isinstance(self.observation_space, gym.spaces.Tuple):
                 assert initial_state.ndim in (1,2, 3)
-            tiling_shape = (num_particles * population_size,) + tuple(
-                [1] * initial_state.ndim
-            )
-            initial_obs_batch = np.tile(initial_state, tiling_shape).astype(np.float32)
+
+                tiling_shape = (num_particles * population_size,) + tuple(
+                    [1] * initial_state.ndim
+                )
+                initial_obs_batch = np.tile(initial_state, tiling_shape).astype(np.float32)
+            else: 
+                # Second element of initial state is the kinematic obs 
+                inital_mppi_pose = initial_state[1][0,1:4]   #x, y, theta
+                initial_mppi_speed = np.linalg.norm(initial_state[1][0, 4:6])
+                initial_mppi_obs = np.concatenate([inital_mppi_pose, initial_mppi_speed.reshape(1,)])
+                tiling_shape =  (num_particles * population_size,) + tuple(
+                    [1] * initial_mppi_obs.ndim
+                )
+                initial_obs_batch = np.tile(initial_mppi_obs, tiling_shape).astype(np.float32)
+
+
             if self.obs_process_fn:
                 initial_obs_batch = self.obs_process_fn(initial_obs_batch)
             model_state = self.reset(initial_obs_batch, return_as_np=False)

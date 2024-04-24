@@ -142,6 +142,8 @@ class ModelTrainer:
         # only enable tqdm if training for a single epoch,
         # otherwise it produces too much output
         disable_tqdm = silent or (num_epochs is None or num_epochs > 1)
+        
+        
 
         for epoch in epoch_iter:
             if batch_callback:
@@ -149,12 +151,21 @@ class ModelTrainer:
             else:
                 batch_callback_epoch = None
             batch_losses: List[float] = []
+            kin_losses, img_losses, reward_losses, kl_losses = [], [], [], []
             for batch in tqdm.tqdm(dataset_train, disable=disable_tqdm):
                 loss, meta = self.model.update(batch, self.optimizer)
                 batch_losses.append(loss)
+                kin_losses.append(meta['kinematic_loss'])
+                img_losses.append(meta['img_loss'])
+                reward_losses.append(meta['reward_loss'])
+                kl_losses.append(meta['kl_loss'])
                 if batch_callback_epoch:
                     batch_callback_epoch(loss, meta, "train")
             total_avg_loss = np.mean(batch_losses).mean().item()
+            avg_kin_loss = np.mean(kin_losses).mean().item()
+            avg_img_loss = np.mean(img_losses).mean().item()
+            avg_kl_loss = np.mean(kl_losses).mean().item()
+            avg_reward_loss = np.mean(reward_losses).mean().item()
             training_losses.append(total_avg_loss)
 
             eval_score = None
@@ -202,6 +213,7 @@ class ModelTrainer:
                     total_avg_loss,
                     eval_score,
                     best_val_score,
+                    (avg_img_loss, avg_kin_loss, avg_kl_loss, avg_reward_loss)
                 )
 
             if patience and epochs_since_update >= patience:
