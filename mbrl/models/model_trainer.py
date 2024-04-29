@@ -155,17 +155,17 @@ class ModelTrainer:
             for batch in tqdm.tqdm(dataset_train, disable=disable_tqdm):
                 loss, meta = self.model.update(batch, self.optimizer)
                 batch_losses.append(loss)
-                kin_losses.append(meta['kinematic_loss'])
+                kin_losses.append(meta['kinematic_loss']) # ensemble avgs
                 img_losses.append(meta['img_loss'])
                 reward_losses.append(meta['reward_loss'])
                 kl_losses.append(meta['kl_loss'])
                 if batch_callback_epoch:
                     batch_callback_epoch(loss, meta, "train")
-            total_avg_loss = np.mean(batch_losses).mean().item()
-            avg_kin_loss = np.mean(kin_losses).mean().item()
-            avg_img_loss = np.mean(img_losses).mean().item()
-            avg_kl_loss = np.mean(kl_losses).mean().item()
-            avg_reward_loss = np.mean(reward_losses).mean().item()
+            total_avg_loss = torch.concatenate(batch_losses).mean().item()
+            avg_kin_loss = np.mean(kin_losses).item()
+            avg_img_loss = np.mean(img_losses).item()
+            avg_kl_loss = np.mean(kl_losses).item()
+            avg_reward_loss = np.mean(reward_losses).item()
             training_losses.append(total_avg_loss)
 
             eval_score = None
