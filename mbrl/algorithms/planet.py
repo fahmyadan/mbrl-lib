@@ -103,7 +103,7 @@ def train(
     # Create PlaNet model
     cfg.dynamics_model.action_size = env.action_space.shape[0]
     planet = hydra.utils.instantiate(cfg.dynamics_model)
-    assert isinstance(planet, mbrl.models.PlaNetModel)
+    assert isinstance(planet, mbrl.models.PlaNetModel) or isinstance(planet, mbrl.models.PlaNetEnsemble)
     model_env = ModelEnv(env, planet, no_termination, generator=rng)
     trainer = ModelTrainer(planet, logger=logger, optim_lr=1e-3, optim_eps=1e-4)
 
@@ -199,9 +199,16 @@ def train(
             max_batches_per_loop_train=cfg.overrides.num_grad_updates,
             use_simple_sampler=True,
         )
-        trainer.train(
-            dataset, num_epochs=1, batch_callback=batch_callback, evaluate=False, callback=wandb[0]
-        )
+        if wandb:
+            trainer.train(
+                dataset, num_epochs=1, batch_callback=batch_callback, evaluate=False, callback=wandb[0]
+            )
+        else:
+            trainer.train(
+                dataset, num_epochs=1, batch_callback=batch_callback, evaluate=False
+            )
+
+
         planet.save(work_dir)
         if cfg.overrides.get("save_replay_buffer", False):
             replay_buffer.save(work_dir)
@@ -219,6 +226,7 @@ def train(
         pbar = tqdm(total=1000)
         while not terminated and not truncated:
             planet.update_posterior(obs, action=action, rng=rng)
+            #TODO: Investigate the effect of action noise on performance (test frequency override)
             action_noise = (
                 0
                 if is_test_episode(episode)
@@ -247,6 +255,7 @@ def train(
                 "env_step": step,
             },
         )
+        #TODO: Only record if test episode
         if wandb: 
             reward_cb = wandb[1]
             ep_reward = episode_reward * is_test_episode(episode) 
