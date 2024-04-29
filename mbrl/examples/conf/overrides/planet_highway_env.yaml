@@ -57,7 +57,7 @@ trial_length: 100
 action_noise_std: 0.3
 
 # Model overrides
-num_grad_updates: 100
+num_grad_updates: 10
 sequence_length: 30
 batch_size: 200
 free_nats: 3

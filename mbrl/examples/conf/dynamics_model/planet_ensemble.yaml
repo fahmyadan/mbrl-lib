@@ -1,6 +1,6 @@
 # @package _group_
 _target_: mbrl.models.PlaNetEnsemble
-ensemble_size: 5
+ensemble_size: 2
 device: ${device}
 propagation_method: fixed_model
 action_size: 2
