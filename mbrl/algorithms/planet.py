@@ -30,6 +30,7 @@ METRICS_LOG_FORMAT = [
     ("gradient_norm", "GN", "float"),
     ("kl_loss", "KL", "float"),
 ]
+import matplotlib.pyplot as plt
 
 
 def train(
@@ -260,3 +261,67 @@ def train(
 
     # returns average episode reward (e.g., to use for tuning learning curves)
     return total_rewards / cfg.algorithm.num_episodes
+
+def evaluate_trained_model(model_path, env, cfg):
+
+    rng = torch.Generator(device=cfg.device)
+    rng.manual_seed(cfg.seed)
+    np_rng = np.random.default_rng(seed=cfg.seed)
+
+    cfg.dynamics_model.action_size = env.action_space.shape[0]
+    planet = hydra.utils.instantiate(cfg.dynamics_model)
+    assert isinstance(planet, mbrl.models.PlaNetModel)
+
+    #TODO: Load model from model path!!!
+    # model = TheModelClass(*args, **kwargs)
+    planet.load_state_dict(torch.load(model_path))
+    planet.eval()
+    model_env = ModelEnv(env, planet, no_termination, generator=rng)
+
+    agent = create_trajectory_optim_agent_for_model(model_env, cfg.algorithm.agent)
+    total_rewards = []
+    pbar = tqdm(total=50)
+    # Collect one episode of data
+    for eval_episode in range(50):
+        episode_reward = 0.0
+        obs, _ = env.reset()
+        agent.reset()
+        planet.reset_posterior()
+        action = None
+        terminated = False
+        truncated = False
+        step = 0
+        while not terminated and not truncated:
+            planet.update_posterior(obs, action=action, rng=rng)
+            action_noise = 0
+            action = agent.act(obs) + action_noise
+            action = np.clip(
+                action, -1.0, 1.0, dtype=env.action_space.dtype
+            )  # to account for the noise and fix dtype
+            next_obs, reward, terminated, truncated, _ = env.step(action)
+            episode_reward += reward
+            obs = next_obs
+            #TODO: Add some KPI logging, travel time collision etc. 
+            # if debug_mode:
+            #     print(f"step: {step}, reward: {reward}.")
+            step += 1
+        pbar.update(1)
+        
+        total_rewards.append(episode_reward)
+        # obs, _ = env.reset()
+        # terminated = False
+        # truncated = False
+    pbar.close()
+    fig, ax = plt.subplots()
+
+    # Generate a boxplot
+    ax.boxplot(total_rewards)
+
+    # Set the title and labels as needed
+    ax.set_title('Boxplot of Rewards')
+    ax.set_ylabel('Values')
+
+    # Show the plot
+    plt.show()
+
+    pass
