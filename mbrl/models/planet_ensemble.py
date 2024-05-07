@@ -56,7 +56,7 @@ class PlaNetEnsemble(BasicEnsemble):
             if meta is not None:
                 with torch.no_grad():
                     grad_norm = 0.0
-                    for p in list(filter(lambda p: p.grad is not None, self.parameters())):
+                    for p in list(filter(lambda p: p.grad is not None, model.parameters())):
                         grad_norm += p.grad.data.norm(2).item() #Use L1 norm instead of l2 to better handle outliers
                     meta["grad_norm"] = grad_norm
             optimizer.step()
@@ -157,6 +157,16 @@ class PlaNetEnsemble(BasicEnsemble):
 
         self.ensemble_gaussian_params.append(model_params)
 
+        pass
+    
+
+    def count_params(self):
+
+        model_params =[]
+        for model in self.members:
+            pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+            model_params.append(pytorch_total_params)
+        
         pass
 
 
