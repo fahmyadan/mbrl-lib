@@ -199,9 +199,14 @@ def train(
             max_batches_per_loop_train=cfg.overrides.num_grad_updates,
             use_simple_sampler=True,
         )
-        trainer.train(
-            dataset, num_epochs=1, batch_callback=batch_callback, evaluate=False, callback=wandb[0]
-        )
+        if wandb:
+            trainer.train(
+                dataset, num_epochs=1, batch_callback=batch_callback, evaluate=False, callback=wandb[0]
+            )
+        else:
+            trainer.train(
+                dataset, num_epochs=1, batch_callback=batch_callback, evaluate=False
+            )
         planet.save(work_dir)
         if cfg.overrides.get("save_replay_buffer", False):
             replay_buffer.save(work_dir)
