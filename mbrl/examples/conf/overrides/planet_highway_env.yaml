@@ -1,13 +1,14 @@
 # @package _group_
 env: "intersection-v0"
-evaluate_trained: true
+evaluate_trained: false
 logging:
   wandb: false
   project_name: 'Planet'
   tensorboard_log: 'logs'
   model_path: '/home/tsl/Desktop/models/planet/run-20240501_141635-fs2sufpj (short_horizon)/model.pth'
+  eval_episodes: 100
 
-  
+n_epochs: 3
 
 
 env_args:
@@ -87,8 +88,8 @@ mppi:
   noise_mu : [0, 0]
   u_min: [-5, -0.7]
   u_max: [5, 0.5]
-  horizon: 15 
-  num_samples : 500
-  lambda_: 2000
+  horizon: 10 
+  num_samples : 1000
+  lambda_: 1000
 
 
