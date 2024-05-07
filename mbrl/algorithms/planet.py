@@ -190,6 +190,7 @@ def train(
     # PlaNet loop
     step = replay_buffer.num_stored
     total_rewards = 0.0
+    n_epochs = cfg.overrides.n_epochs
     for episode in tqdm(range(cfg.algorithm.num_episodes)):
         # Train the model for one epoch of `num_grad_updates`
         dataset, _ = get_sequence_buffer_iterator(
@@ -202,11 +203,11 @@ def train(
         )
         if wandb:
             trainer.train(
-                dataset, num_epochs=1, batch_callback=batch_callback, evaluate=False, callback=wandb[0]
+                dataset, num_epochs=n_epochs, batch_callback=batch_callback, evaluate=False, callback=wandb[0]
             )
         else:
             trainer.train(
-                dataset, num_epochs=1, batch_callback=batch_callback, evaluate=False
+                dataset, num_epochs=n_epochs, batch_callback=batch_callback, evaluate=False
             )
         planet.save(work_dir)
         if cfg.overrides.get("save_replay_buffer", False):
@@ -272,17 +273,16 @@ def evaluate_trained_model(model_path, env, cfg):
     planet = hydra.utils.instantiate(cfg.dynamics_model)
     assert isinstance(planet, mbrl.models.PlaNetModel)
 
-    #TODO: Load model from model path!!!
-    # model = TheModelClass(*args, **kwargs)
     planet.load_state_dict(torch.load(model_path))
     planet.eval()
     model_env = ModelEnv(env, planet, no_termination, generator=rng)
 
+    n_episodes = cfg.overrides.logging.eval_episodes
     agent = create_trajectory_optim_agent_for_model(model_env, cfg.algorithm.agent)
     total_rewards = []
-    pbar = tqdm(total=50)
+    pbar = tqdm(total=n_episodes)
     # Collect one episode of data
-    for eval_episode in range(50):
+    for eval_episode in range(n_episodes):
         episode_reward = 0.0
         obs, _ = env.reset()
         agent.reset()
@@ -312,15 +312,18 @@ def evaluate_trained_model(model_path, env, cfg):
         # terminated = False
         # truncated = False
     pbar.close()
+
+    avg_reward = np.mean(total_rewards)
     fig, ax = plt.subplots()
 
     # Generate a boxplot
-    ax.boxplot(total_rewards)
+    ax.boxplot(total_rewards, showmeans= True)
+    # ax.axhline(y=avg_reward, color='r', linestyle='-', label='Average Reward')
 
     # Set the title and labels as needed
     ax.set_title('Boxplot of Rewards')
     ax.set_ylabel('Values')
-
+    ax.legend()
     # Show the plot
     plt.show()
 
