@@ -1,13 +1,13 @@
 # @package _group_
 _target_: mbrl.models.PlaNetEnsemble
-ensemble_size: 4
+ensemble_size: 5
 device: ${device}
 propagation_method: fixed_model
 action_size: 2
 member_cfg:
   _target_: mbrl.models.PlaNetModel
-  obs_shape: [4, 128, 128]
-  obs_encoding_size: 9216 #256 * 6 * 6 
+  obs_shape: [4, 64, 64]
+  obs_encoding_size: 512 #9216 #256 * 6 * 6 
   vec_input: 5
   encoder_config:
     - [4, 32, 4, 2]
@@ -15,12 +15,17 @@ member_cfg:
     - [64, 128, 4, 2]
     - [128, 256, 4, 2]
   decoder_config:
-    - [1024, 1, 1]
-    - - [1024, 128, 5, 2]
-      - [128, 64, 5, 2]
-      - [64, 32, 6, 2]
-      - [32, 4, 6, 2]
-      - [4,4, 2, 2]
+      - [1024, 1, 1]
+      - - [1024, 64, 5, 2]
+        - [64, 32, 5, 2]
+        - [32, 16, 6, 2]
+        - [16, 4, 6, 2] # returns 64 x 64
+    # - [1024, 1, 1]
+    # - - [1024, 128, 5, 2]
+    #   - [128, 64, 5, 2]
+    #   - [64, 32, 6, 2]
+    #   - [32, 4, 6, 2]
+    #   - [4,4, 2, 2] # returns 128 x 128
   action_size: 2
   hidden_size_fcs: 200
   belief_size: 200
