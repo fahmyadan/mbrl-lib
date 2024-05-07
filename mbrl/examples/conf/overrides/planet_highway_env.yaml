@@ -1,9 +1,13 @@
 # @package _group_
 env: "intersection-v0"
+evaluate_trained: true
 logging:
-  wandb: true
+  wandb: false
   project_name: 'Planet'
   tensorboard_log: 'logs'
+  model_path: '/home/tsl/Desktop/models/planet/run-20240501_141635-fs2sufpj (short_horizon)/model.pth'
+
+  
 
 
 env_args:
