@@ -3,9 +3,11 @@ import wandb
 
 class WandbCallback:
 
-    def __init__(self, type:str ):
+    def __init__(self, type:str, wandb_run):
 
-        self.type = type 
+        self.type = type
+        self.wandb_run =  wandb_run
+        self.dir = wandb_run.dir
 
 
     def __call__(self, *inputs):
