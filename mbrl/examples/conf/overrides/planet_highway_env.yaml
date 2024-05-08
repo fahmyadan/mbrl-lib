@@ -1,7 +1,7 @@
 # @package _group_
 env: "intersection-v0"
 logging:
-  wandb: false
+  wandb: true
   project_name: 'Planet'
   tensorboard_log: 'logs'
 
@@ -59,7 +59,7 @@ action_noise_std: 0.3
 # Model overrides
 num_grad_updates: 10
 sequence_length: 10
-batch_size: 200
+batch_size: 500
 free_nats: 3
 kl_scale: 1.0
 
@@ -83,8 +83,8 @@ mppi:
   noise_mu : [0, 0]
   u_min: [-5, -0.7]
   u_max: [5, 0.5]
-  horizon: 15 
-  num_samples : 500
-  lambda_: 2000
+  horizon: 10
+  num_samples : 1000
+  lambda_: 1000
 
 
