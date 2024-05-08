@@ -175,8 +175,8 @@ class MPPIAgent(Agent):
 
         # self.veh_obj.follow_road() 
 
-        # if self.t % 10 == 0 : 
-        #     return  self.env.action_space.sample()
+        if self.t % 10 == 0 : 
+            return  self.env.action_space.sample()
      
         action = self.mppi.command(state)
         
