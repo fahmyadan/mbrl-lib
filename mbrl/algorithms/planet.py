@@ -209,7 +209,9 @@ def train(
             trainer.train(
                 dataset, num_epochs=n_epochs, batch_callback=batch_callback, evaluate=False
             )
-        planet.save(work_dir)
+        if cfg.overrides.logging.wandb:
+            work_dir = pathlib.Path(wandb[0].dir)
+            planet.save(work_dir)
         if cfg.overrides.get("save_replay_buffer", False):
             replay_buffer.save(work_dir)
         metrics = get_metrics_and_clear_metric_containers()
