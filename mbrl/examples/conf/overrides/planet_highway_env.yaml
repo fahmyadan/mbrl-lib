@@ -63,13 +63,13 @@ action_noise_std: 0.3
 
 # Model overrides
 num_grad_updates: 10
-sequence_length: 30
-batch_size: 200
+sequence_length:10
+batch_size: 256
 free_nats: 3
 kl_scale: 1.0
 
 # Planner configuration overrides
-planning_horizon: 10
+planning_horizon: 7
 mppi_num_iters: 5
 mppi_population_size: 1000
 mppi_gamma: 0.9
