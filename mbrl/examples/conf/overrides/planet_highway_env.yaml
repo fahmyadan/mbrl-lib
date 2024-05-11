@@ -2,7 +2,7 @@
 env: "intersection-v0"
 evaluate_trained: false
 logging:
-  wandb: false
+  wandb: true
   project_name: 'Planet'
   tensorboard_log: 'logs'
   model_path: '/home/tsl/Desktop/models/planet/run-20240501_141635-fs2sufpj (short_horizon)/model.pth'
@@ -63,13 +63,13 @@ action_noise_std: 0.3
 
 # Model overrides
 num_grad_updates: 10
-sequence_length: 30
-batch_size: 200
+sequence_length: 8
+batch_size: 256
 free_nats: 3
 kl_scale: 1.0
 
 # Planner configuration overrides
-planning_horizon: 10
+planning_horizon: 7
 mppi_num_iters: 5
 mppi_population_size: 1000
 mppi_gamma: 0.9
@@ -88,8 +88,8 @@ mppi:
   noise_mu : [0, 0]
   u_min: [-5, -0.7]
   u_max: [5, 0.5]
-  horizon: 10 
-  num_samples : 1000
-  lambda_: 1000
+  horizon: 15
+  num_samples : 500
+  lambda_: 2000
 
 
