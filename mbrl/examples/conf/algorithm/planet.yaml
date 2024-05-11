@@ -11,7 +11,7 @@ agent:
   keep_last_solution: false
   verbose: ${debug_mode}
 
-num_initial_trajectories: 70
+num_initial_trajectories: 150
 action_noise_std: 0.3
 test_frequency: 1
 num_episodes: 1000
