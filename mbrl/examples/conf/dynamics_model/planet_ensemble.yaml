@@ -1,6 +1,6 @@
 # @package _group_
 _target_: mbrl.models.PlaNetEnsemble
-ensemble_size: 4
+ensemble_size: 2
 device: ${device}
 propagation_method: fixed_model
 action_size: 2
@@ -18,9 +18,9 @@ member_cfg:
     - [1024, 1, 1]
     - - [1024, 128, 5, 2]
       - [128, 64, 5, 2]
-      - [64, 32, 6, 2]
-      - [32, 4, 6, 2]
-      - [4,4, 2, 2]
+      - [64, 32, 5, 2]
+      - [32, 16, 6, 2]
+      - [16,4, 6, 2]
   action_size: 2
   hidden_size_fcs: 200
   belief_size: 200
