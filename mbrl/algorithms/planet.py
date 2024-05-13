@@ -90,7 +90,7 @@ def train(
         )
 
         
-    rollout_agent_trajectories(
+    total_demo_rewards , metrics = rollout_agent_trajectories(
         env,
         cfg.algorithm.num_initial_trajectories,
         MPPIAgent(env, **omegaconf.OmegaConf.to_container(cfg.overrides.mppi)), 
