@@ -664,16 +664,30 @@ class MonitorKPIs():
         self.all_collisions.append(collisions)
         self.off_road.append(off_road)
 
+        self.calculate_tt()
+
         if self.env._is_truncated():
             self.truncated_time.append(1)
         else:
             self.truncated_time.append(0)
-
-        pass 
-
-    def calculate_tt(self):
+ 
+    def calculate_delay(self):
 
         pass
+    def calculate_tt(self):
+
+        veh_tt = []
+
+        for veh in self.env.controlled_vehicles:
+            if self.env.has_arrived(veh):
+                tt = self.env.time * self.env.config['simulation_frequency'] #Confirm if this is correct 
+            else:
+                tt = None
+            veh_tt.append(tt)
+        
+        self.all_tt.append(veh_tt)
+            
+
 
     def check_collision(self):
 
