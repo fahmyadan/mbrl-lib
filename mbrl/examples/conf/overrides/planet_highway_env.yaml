@@ -9,9 +9,10 @@ logging:
 env_args:
   _target_: mbrl.planning.TrajectoryOptimizerAgent
   offroad_terminal: true
+  duration: 20
   destination: 'o1'
-  initial_vehicle_count: 0
-  spawn_probability: 0
+  initial_vehicle_count: 10
+  spawn_probability: 0.5
   collision_reward: -10
   on_road_reward: 1 
   path_reward: 0
@@ -94,5 +95,6 @@ kpis:
   arrived: true
   delay: true 
   reward: true
+  off_road: true 
 
 
