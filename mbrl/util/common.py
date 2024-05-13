@@ -22,7 +22,7 @@ from .replay_buffer import (
     TransitionIterator,
     TupleReplay
 )
-
+import highway_env
 
 def create_one_dim_tr_model(
     cfg: omegaconf.DictConfig,
@@ -652,6 +652,9 @@ class MonitorKPIs():
         self.truncated_time = []
 
         self.env = env.unwrapped
+        max_speed = self.env.controlled_vehicles[0].MAX_SPEED
+        total_dist = 38.77302896 + 20.420352248334 + 25
+        self.unimpeded_time = total_dist / max_speed * self.env.config['simulation_frequency']
        
 
     def monitor(self):
@@ -665,13 +668,34 @@ class MonitorKPIs():
         self.off_road.append(off_road)
 
         self.calculate_tt()
+        self.calculate_delay()
 
         if self.env._is_truncated():
             self.truncated_time.append(1)
         else:
             self.truncated_time.append(0)
+        
+        
  
     def calculate_delay(self):
+
+        """
+        The delay is the difference between actual travel time and unimpeded travel time 
+
+        Assume v_constant = 40m/s 
+                total travel distance = 38.773 (straight lane 1 - start pos) + 20.420 (circular lane length) + 25m (exit length) 
+        """
+
+        veh_delay = []
+
+        for veh in self.env.controlled_vehicles:
+            if self.env.has_arrived(veh):
+                tt = self.env.time * self.env.config['simulation_frequency'] 
+                delay = tt - self.unimpeded_time
+            else: 
+                delay = None 
+            veh_delay.append(delay)
+        self.all_delay.append(veh_delay)
 
         pass
     def calculate_tt(self):
