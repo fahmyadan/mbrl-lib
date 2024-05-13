@@ -22,6 +22,7 @@ from mbrl.util.common import (
     create_replay_buffer,
     get_sequence_buffer_iterator,
     rollout_agent_trajectories,
+    MonitorKPIs
 )
 
 METRICS_LOG_FORMAT = [
@@ -99,6 +100,7 @@ def train(
         collect_full_trajectories=True,
         trial_length=cfg.overrides.trial_length,
         agent_uses_low_dim_obs=False,
+        kwargs=cfg.overrides.kpis
     )
 
     # Create PlaNet model

@@ -2,7 +2,7 @@
 env: "intersection-v0"
 evaluate_trained: false
 logging:
-  wandb: true
+  wandb: false
   project_name: 'Planet'
   tensorboard_log: 'logs'
   model_path: '/home/tsl/Desktop/models/planet/run-20240501_141635-fs2sufpj (short_horizon)/model.pth'
@@ -20,7 +20,7 @@ env_args:
   collision_reward: -10
   on_road_reward: 1 
   path_reward: 0
-  arrived_reward: 10
+  arrived_reward: 20
   simulation_frequency: 10
   policy_frequency: 5
   # ego_lane: [
@@ -63,7 +63,7 @@ action_noise_std: 0.3
 
 # Model overrides
 num_grad_updates: 10
-sequence_length: 8
+sequence_length: 10
 batch_size: 256
 free_nats: 3
 kl_scale: 1.0
@@ -91,5 +91,14 @@ mppi:
   horizon: 15
   num_samples : 500
   lambda_: 2000
+
+
+kpis: 
+  travel_time: true
+  collisions: true
+  arrived: true
+  delay: true 
+  reward: true
+
 
 

@@ -487,6 +487,7 @@ def rollout_agent_trajectories(
     collect_full_trajectories: bool = False,
     agent_uses_low_dim_obs: bool = False,
     seed: Optional[int] = None,
+    **kwargs
 ) -> List[float]:
     """Rollout agent trajectories in the given environment.
 
@@ -534,6 +535,8 @@ def rollout_agent_trajectories(
 
     step = 0
     trial = 0
+    kpis = [vals for vals in kwargs.values()]
+    monitor = MonitorKPIs(kpis[0], env)
     total_rewards: List[float] = []
     while True:
         obs, info = env.reset(seed=seed)
@@ -630,3 +633,35 @@ def step_env_and_add_to_buffer(
     if callback:
         callback(*(obs, action, next_obs, reward, terminated, truncated))
     return next_obs, reward, terminated, truncated, info
+
+
+class MonitorKPIs():
+
+    def __init__(self, kpis, env):
+
+        self.travel_time, self.all_tt = kpis['travel_time'], []
+        self.delay, self.all_delay = kpis['delay'], []
+        self.collisions, self.all_collisions = kpis['collisions'], []
+        self.reward, self.all_rewards = kpis['reward'], []
+        self.arrived = []
+
+        self.env = env
+
+    def monitor(self):
+
+
+        pass 
+
+    def calculate_tt(self):
+
+        pass
+
+    def check_collision(self):
+
+        pass
+    
+    def check_arrived(self):
+
+        pass
+
+
