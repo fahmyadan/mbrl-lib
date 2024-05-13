@@ -15,7 +15,7 @@ env_args:
   collision_reward: -10
   on_road_reward: 1 
   path_reward: 0
-  arrived_reward: 10
+  arrived_reward: 20
   simulation_frequency: 10
   policy_frequency: 5
   # ego_lane: [
@@ -59,7 +59,7 @@ action_noise_std: 0.3
 # Model overrides
 num_grad_updates: 10
 sequence_length: 10
-batch_size: 200
+batch_size: 256
 free_nats: 3
 kl_scale: 1.0
 
@@ -86,5 +86,13 @@ mppi:
   horizon: 10
   num_samples : 1000
   lambda_: 1000
+
+
+kpis: 
+  travel_time: true
+  collisions: true
+  arrived: true
+  delay: true 
+  reward: true
 
 
