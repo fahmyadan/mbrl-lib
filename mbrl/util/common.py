@@ -533,12 +533,13 @@ def rollout_agent_trajectories(
             "corrupted trajectory data."
         )
 
-    step = 0
+    
     trial = 0
     kpis = [vals for vals in kwargs.values()]
     monitor = MonitorKPIs(kpis[0], env)
     total_rewards: List[float] = []
     while True:
+        step = 0
         obs, info = env.reset(seed=seed)
         agent.reset()
         terminated = False
@@ -581,9 +582,12 @@ def rollout_agent_trajectories(
                 break
         trial += 1
         total_rewards.append(total_reward)
+        monitor.all_rewards.append(total_reward)  
+        monitor.monitor()
         if collect_full_trajectories and trial == steps_or_trials_to_collect:
             break
-    return total_rewards
+        
+    return total_rewards, monitor
 
 
 def step_env_and_add_to_buffer(
@@ -644,11 +648,26 @@ class MonitorKPIs():
         self.collisions, self.all_collisions = kpis['collisions'], []
         self.reward, self.all_rewards = kpis['reward'], []
         self.arrived = []
+        self.off_road = []
+        self.truncated_time = []
 
-        self.env = env
+        self.env = env.unwrapped
+       
 
     def monitor(self):
 
+        collisions = self.check_collision()
+        arrived = self.check_arrived()
+        off_road = self.check_off_road()
+
+        self.arrived.append(arrived)
+        self.all_collisions.append(collisions)
+        self.off_road.append(off_road)
+
+        if self.env._is_truncated():
+            self.truncated_time.append(1)
+        else:
+            self.truncated_time.append(0)
 
         pass 
 
@@ -658,10 +677,41 @@ class MonitorKPIs():
 
     def check_collision(self):
 
-        pass
+        collisions = []
+        for veh in self.env.controlled_vehicles:
+
+            if veh.crashed:
+                collisions.append(1)
+            else:
+                collisions.append(0)
+
+        return collisions
     
     def check_arrived(self):
 
-        pass
+        has_arrived = self.env.has_arrived
+        arrived = []
+        for veh in self.env.controlled_vehicles:
+
+            if has_arrived(veh):
+
+                arrived.append(1)
+            else:
+                arrived.append(0)
+        return arrived
+    
+    def check_off_road(self):
+        off_road = []
+        for veh in self.env.controlled_vehicles:
+
+            if not veh.on_road:
+                off_road.append(1)
+            else:
+                off_road.append(0)
+
+        return off_road
+
+
+
 
 
