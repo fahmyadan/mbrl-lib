@@ -32,7 +32,9 @@ METRICS_LOG_FORMAT = [
     ("kl_loss", "KL", "float"),
 ]
 import matplotlib.pyplot as plt
-
+import wandb as wb
+from gymnasium.wrappers.monitoring.video_recorder import VideoRecorder
+from gymnasium.wrappers.record_video import RecordVideo
 
 def train(
     env: gym.Env,
@@ -89,7 +91,7 @@ def train(
             tuple_obs= True
         )
 
-        
+    
     total_demo_rewards , metrics = rollout_agent_trajectories(
         env,
         cfg.algorithm.num_initial_trajectories,
@@ -188,6 +190,11 @@ def train(
 
     def is_test_episode(episode_):
         return episode_ % cfg.algorithm.test_frequency == 0
+    
+    def episode_trigger(episode_id):
+        return episode_id % 2 == 0
+    if env.render_mode =='rgb_array':
+        env = RecordVideo(env, video_folder="videos", episode_trigger=episode_trigger)
 
     # PlaNet loop
     step = replay_buffer.num_stored
@@ -228,6 +235,7 @@ def train(
         terminated = False
         truncated = False
         pbar = tqdm(total=1000)
+
         while not terminated and not truncated:
             planet.update_posterior(obs, action=action, rng=rng)
             action_noise = (
@@ -266,6 +274,7 @@ def train(
 
     # returns average episode reward (e.g., to use for tuning learning curves)
     return total_rewards / cfg.algorithm.num_episodes
+
 
 def evaluate_trained_model(model_path, env, cfg):
 
