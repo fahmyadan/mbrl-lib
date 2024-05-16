@@ -1,7 +1,7 @@
 # @package _group_
 env: "intersection-v0"
 logging:
-  wandb: true
+  wandb: false
   project_name: 'Planet'
   tensorboard_log: 'logs'
 
@@ -11,14 +11,16 @@ env_args:
   offroad_terminal: true
   duration: 20
   destination: 'o1'
-  initial_vehicle_count: 10
+  initial_vehicle_count: 5
   spawn_probability: 0.5
   collision_reward: -10
-  on_road_reward: 1 
+  on_road_reward: 0.1 
+  high_speed_reward: 0.5
   path_reward: 0
   arrived_reward: 20
   simulation_frequency: 10
   policy_frequency: 5
+  exit_distance: 70
   # ego_lane: [
   #           ["o2", "ir2", 0],
   #           ["o1", "ir1", 0]
