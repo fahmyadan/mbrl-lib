@@ -31,7 +31,10 @@ METRICS_LOG_FORMAT = [
     ("gradient_norm", "GN", "float"),
     ("kl_loss", "KL", "float"),
 ]
-
+import matplotlib.pyplot as plt
+import wandb as wb
+from gymnasium.wrappers.monitoring.video_recorder import VideoRecorder
+from gymnasium.wrappers.record_video import RecordVideo
 
 def train(
     env: gym.Env,
@@ -88,7 +91,7 @@ def train(
             tuple_obs= True
         )
 
-        
+    
     total_demo_rewards , metrics = rollout_agent_trajectories(
         env,
         cfg.algorithm.num_initial_trajectories,
@@ -190,6 +193,11 @@ def train(
 
     def is_test_episode(episode_):
         return episode_ % cfg.algorithm.test_frequency == 0
+    
+    def episode_trigger(episode_id):
+        return episode_id % 2 == 0
+    if env.render_mode =='rgb_array':
+        env = RecordVideo(env, video_folder="videos", episode_trigger=episode_trigger)
 
     # PlaNet loop
     step = replay_buffer.num_stored
@@ -231,6 +239,7 @@ def train(
         terminated = False
         truncated = False
         pbar = tqdm(total=1000)
+
         while not terminated and not truncated:
             planet.update_posterior(obs, action=action, rng=rng)
             #TODO: Investigate the effect of action noise on performance (test frequency override)
@@ -271,3 +280,70 @@ def train(
 
     # returns average episode reward (e.g., to use for tuning learning curves)
     return total_rewards / cfg.algorithm.num_episodes
+
+
+def evaluate_trained_model(model_path, env, cfg):
+
+    rng = torch.Generator(device=cfg.device)
+    rng.manual_seed(cfg.seed)
+    np_rng = np.random.default_rng(seed=cfg.seed)
+
+    cfg.dynamics_model.action_size = env.action_space.shape[0]
+    planet = hydra.utils.instantiate(cfg.dynamics_model)
+    assert isinstance(planet, mbrl.models.PlaNetModel)
+
+    planet.load_state_dict(torch.load(model_path))
+    planet.eval()
+    model_env = ModelEnv(env, planet, no_termination, generator=rng)
+
+    n_episodes = cfg.overrides.logging.eval_episodes
+    agent = create_trajectory_optim_agent_for_model(model_env, cfg.algorithm.agent)
+    total_rewards = []
+    pbar = tqdm(total=n_episodes)
+    # Collect one episode of data
+    for eval_episode in range(n_episodes):
+        episode_reward = 0.0
+        obs, _ = env.reset()
+        agent.reset()
+        planet.reset_posterior()
+        action = None
+        terminated = False
+        truncated = False
+        step = 0
+        while not terminated and not truncated:
+            planet.update_posterior(obs, action=action, rng=rng)
+            action_noise = 0
+            action = agent.act(obs) + action_noise
+            action = np.clip(
+                action, -1.0, 1.0, dtype=env.action_space.dtype
+            )  # to account for the noise and fix dtype
+            next_obs, reward, terminated, truncated, _ = env.step(action)
+            episode_reward += reward
+            obs = next_obs
+            #TODO: Add some KPI logging, travel time collision etc. 
+            # if debug_mode:
+            #     print(f"step: {step}, reward: {reward}.")
+            step += 1
+        pbar.update(1)
+        
+        total_rewards.append(episode_reward)
+        # obs, _ = env.reset()
+        # terminated = False
+        # truncated = False
+    pbar.close()
+
+    avg_reward = np.mean(total_rewards)
+    fig, ax = plt.subplots()
+
+    # Generate a boxplot
+    ax.boxplot(total_rewards, showmeans= True)
+    # ax.axhline(y=avg_reward, color='r', linestyle='-', label='Average Reward')
+
+    # Set the title and labels as needed
+    ax.set_title('Boxplot of Rewards')
+    ax.set_ylabel('Values')
+    ax.legend()
+    # Show the plot
+    plt.show()
+
+    pass
