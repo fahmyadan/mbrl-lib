@@ -21,6 +21,7 @@ env_args:
   simulation_frequency: 10
   policy_frequency: 5
   exit_distance: 70
+  render_mode: rgb_array
   # ego_lane: [
   #           ["o2", "ir2", 0],
   #           ["o1", "ir1", 0]
