@@ -89,11 +89,11 @@ mppi:
   nx : 4
   noise_sigma: [[5, 0],[0,0.7]]
   noise_mu : [0, 0]
-  u_min: [-5, -0.7]
-  u_max: [5, 0.5]
+  u_min: [-40, -1.0]
+  u_max: [40, 1.0]
   horizon: 10
-  num_samples : 1000
-  lambda_: 1000
+  num_samples : 2000
+  lambda_: 200
 
 
 kpis: 
