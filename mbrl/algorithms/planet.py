@@ -195,9 +195,11 @@ def train(
         return episode_ % cfg.algorithm.test_frequency == 0
     
     def episode_trigger(episode_id):
-        return episode_id % 2 == 0
+        return episode_id % 50 == 0
     if env.render_mode =='rgb_array':
-        env = RecordVideo(env, video_folder="videos", episode_trigger=episode_trigger)
+        if wandb:
+            vid_dir = wandb[0].dir + '/videos'
+            env = RecordVideo(env, video_folder=vid_dir, episode_trigger=episode_trigger)
 
     # PlaNet loop
     step = replay_buffer.num_stored
@@ -277,6 +279,9 @@ def train(
             ep_reward = episode_reward * is_test_episode(episode) 
             train_ep_reward = episode_reward * (1 - is_test_episode(episode))
             reward_cb(None, None, None, ep_reward, train_ep_reward, step)
+            if env.render_mode == 'rgb_array' and episode_trigger(episode):
+                video_path = f'{vid_dir}/rl-video-episode-{episode}.mp4'
+                wb.log({"Intersection": wb.Video(video_path, fps=4, format="mp4")})
 
     # returns average episode reward (e.g., to use for tuning learning curves)
     return total_rewards / cfg.algorithm.num_episodes
