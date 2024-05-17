@@ -110,7 +110,7 @@ def train(
     planet = hydra.utils.instantiate(cfg.dynamics_model)
     assert isinstance(planet, mbrl.models.PlaNetModel)
     model_env = ModelEnv(env, planet, no_termination, generator=rng)
-    trainer = ModelTrainer(planet, logger=logger, optim_lr=1e-3, optim_eps=1e-4)
+    trainer = ModelTrainer(planet, cfg.overrides, logger=logger, optim_lr=1e-3, optim_eps=1e-4)
 
     # Create CEM agent
     # This agent rolls outs trajectories using ModelEnv, which uses planet.sample()
@@ -139,17 +139,19 @@ def train(
 
         return metrics_
 
-    def batch_callback(_epoch, _loss, meta, _mode):
+    def batch_callback(train_episode, total_grad_updates, grad_updates, _loss, meta, _mode):
         if meta:
             rec_losses.append(meta["img_loss"])
             kin_losses.append(meta["kinematic_loss"])
             reward_losses.append(meta["reward_loss"])
             kl_losses.append(meta["kl_loss"])
-            #log_meta(meta)
+            if train_episode % 10 ==0 and grad_updates % int(total_grad_updates -1) == 0:
+                log_meta(meta, train_episode, grad_updates)
+                
             if "grad_norm" in meta:
                 grad_norms.append(meta["grad_norm"])
     
-    def log_meta(meta, step = 1):
+    def log_meta(meta, _epoch, _update):
         from PIL import Image
         import random
         import os
@@ -159,10 +161,11 @@ def train(
         if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
         
-        reconstruction = meta['reconstruction'].cpu().numpy()
-        target_obs = meta['target_obs'].cpu().numpy()
+        reconstruction = meta['img_reconstruction'].cpu().numpy()
+        target_obs = meta['target_obs_img'].cpu().numpy()
         rand_batch = random.randint(0,reconstruction.shape[0] - 1)
         horizon = reconstruction.shape[1]
+        # Pick a random batch from the training epoch reconstructions and targets
 
         for t in range(horizon):
 
@@ -184,9 +187,9 @@ def train(
             im = Image.fromarray(seq_t[:,:, -1])
             im_target = Image.fromarray(target_t[:,:, -1])
             
-            im.save(os.path.join(save_dir, f'reconstruction_{rand_batch}_t{t}_step{step}.png'))
-            im_target.save(os.path.join(save_dir, f'target_obs{rand_batch}_t{t}_step{step}.png'))
-        # im.save("your_file.jpeg")
+            im.save(os.path.join(save_dir, f'reconstruction_epoch_{_epoch}_grad_{_update}_t_{t}.png'))
+            im_target.save(os.path.join(save_dir, f'target_obs_epoch_{_epoch}_grad_{_update}_t_{t}.png'))
+
 
     def is_test_episode(episode_):
         return episode_ % cfg.algorithm.test_frequency == 0
@@ -214,11 +217,11 @@ def train(
         )
         if wandb:
             trainer.train(
-                dataset, num_epochs=n_epochs, batch_callback=batch_callback, evaluate=False, callback=wandb[0]
+                dataset, num_epochs=n_epochs, batch_callback=batch_callback, evaluate=False, callback=wandb[0], episode=episode
             )
         else:
             trainer.train(
-                dataset, num_epochs=n_epochs, batch_callback=batch_callback, evaluate=False
+                dataset, num_epochs=n_epochs, batch_callback=batch_callback, evaluate=False, episode=episode
             )
         if cfg.overrides.logging.wandb:
             work_dir = pathlib.Path(wandb[0].dir)
