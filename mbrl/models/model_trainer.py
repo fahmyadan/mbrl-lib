@@ -43,6 +43,7 @@ class ModelTrainer:
     def __init__(
         self,
         model: Model,
+        cfg,
         optim_lr: float = 1e-4,
         weight_decay: float = 1e-5,
         optim_eps: float = 1e-8,
@@ -50,7 +51,7 @@ class ModelTrainer:
     ):
         self.model = model
         self._train_iteration = 0
-
+        self.total_grad_updates = cfg.num_grad_updates
         self.logger = logger
         if self.logger:
             self.logger.register_group(
@@ -78,6 +79,7 @@ class ModelTrainer:
         batch_callback: Optional[Callable] = None,
         evaluate: bool = True,
         silent: bool = False,
+        episode: int = 0
     ) -> Tuple[List[float], List[float]]:
         """Trains the model for some number of epochs.
 
@@ -147,11 +149,13 @@ class ModelTrainer:
 
         for epoch in epoch_iter:
             if batch_callback:
-                batch_callback_epoch = functools.partial(batch_callback, epoch)
+                batch_callback_epoch = functools.partial(batch_callback, episode, self.total_grad_updates)
+                
             else:
                 batch_callback_epoch = None
             batch_losses: List[float] = []
             kin_losses, img_losses, reward_losses, kl_losses = [], [], [], []
+            grad_updates = 0 
             for batch in tqdm.tqdm(dataset_train, disable=disable_tqdm):
                 loss, meta = self.model.update(batch, self.optimizer)
                 batch_losses.append(loss)
@@ -160,7 +164,8 @@ class ModelTrainer:
                 reward_losses.append(meta['reward_loss'])
                 kl_losses.append(meta['kl_loss'])
                 if batch_callback_epoch:
-                    batch_callback_epoch(loss, meta, "train")
+                    batch_callback_epoch(grad_updates,loss, meta, "train")
+                grad_updates +=1
             total_avg_loss = torch.concatenate(batch_losses).mean().item()
             avg_kin_loss = np.mean(kin_losses).item()
             avg_img_loss = np.mean(img_losses).item()
