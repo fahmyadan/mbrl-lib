@@ -35,6 +35,7 @@ import matplotlib.pyplot as plt
 import wandb as wb
 from gymnasium.wrappers.monitoring.video_recorder import VideoRecorder
 from gymnasium.wrappers.record_video import RecordVideo
+import numpy as np 
 
 def train(
     env: gym.Env,
@@ -150,19 +151,29 @@ def train(
                 
             if "grad_norm" in meta:
                 grad_norms.append(meta["grad_norm"])
+
+    def _denormalise_pixel_obs(obs: torch.Tensor) -> np.ndarray:
+
+         # Reverse the normalization
+        obs = (obs + 0.5) * 256.0
+        return obs.astype(np.uint8)
+
+
     
     def log_meta(meta, _epoch, _update):
         from PIL import Image
         import random
         import os
         from pathlib import Path 
-        save_dir= str(Path(__file__).parents[2]) + '/recons'
+        save_dir= str(Path(__file__).parents[2]) + '/recons' #/ 256.0 - 0.5
 
         if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
         
         reconstruction = meta['img_reconstruction'].cpu().numpy()
         target_obs = meta['target_obs_img'].cpu().numpy()
+        target_obs = _denormalise_pixel_obs(target_obs)
+        reconstruction = _denormalise_pixel_obs(reconstruction)
         rand_batch = random.randint(0,reconstruction.shape[0] - 1)
         horizon = reconstruction.shape[1]
         # Pick a random batch from the training epoch reconstructions and targets
@@ -177,15 +188,20 @@ def train(
                 seq_t = np.squeeze(seq_t, axis=0)
                 seq_t = (seq_t * 255).astype(np.uint8)
             else:
-                seq_t = np.transpose(seq_t, (1, 2, 0))
-                seq_t = np.clip(seq_t * 255, 0, 255).astype(np.uint8)
+                seq_t = np.transpose(seq_t, (1, 2, 0)).astype(np.uint8)
+                seq_t = np.clip(seq_t, 0, 255)
 
-                target_t = np.transpose(target_t, (1, 2, 0))
-                target_t = np.clip(target_t * 255, 0, 255).astype(np.uint8)
+                #Denormalise the taregt image (see def _process_pixel_observations)
+                # denorm_target = (target_t +0.5) * 256.0
+                # denorm_target = denorm_target.astype(np.uint8)
+                target_t = np.transpose(target_t, (1, 2, 0)).astype(np.uint8)
+                # target_t = np.clip(target_t * 255, 0, 255).astype(np.uint8)
 
 
-            im = Image.fromarray(seq_t[:,:, -1])
-            im_target = Image.fromarray(target_t[:,:, -1])
+            # im = Image.fromarray(seq_t[:,:, -1])
+            # im_target = Image.fromarray(target_t)
+            im = Image.fromarray(seq_t)
+            im_target = Image.fromarray(target_t)
             
             im.save(os.path.join(save_dir, f'reconstruction_epoch_{_epoch}_grad_{_update}_t_{t}.png'))
             im_target.save(os.path.join(save_dir, f'target_obs_epoch_{_epoch}_grad_{_update}_t_{t}.png'))
