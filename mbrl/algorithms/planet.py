@@ -165,10 +165,11 @@ def train(
         import random
         import os
         from pathlib import Path 
-        save_dir= str(Path(__file__).parents[2]) + '/recons' #/ 256.0 - 0.5
+        global recons_dir
+        recons_dir= str(Path(__file__).parents[2]) + '/recons' #/ 256.0 - 0.5
 
-        if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
+        if not os.path.exists(recons_dir):
+                os.makedirs(recons_dir)
         
         reconstruction = meta['img_reconstruction'].cpu().numpy()
         target_obs = meta['target_obs_img'].cpu().numpy()
@@ -203,8 +204,8 @@ def train(
             im = Image.fromarray(seq_t)
             im_target = Image.fromarray(target_t)
             
-            im.save(os.path.join(save_dir, f'reconstruction_epoch_{_epoch}_grad_{_update}_t_{t}.png'))
-            im_target.save(os.path.join(save_dir, f'target_obs_epoch_{_epoch}_grad_{_update}_t_{t}.png'))
+            im.save(os.path.join(recons_dir, f'reconstruction_epoch_{_epoch}_grad_{_update}_t_{t}_.png'))
+            im_target.save(os.path.join(recons_dir, f'target_epoch_{_epoch}_grad_{_update}_t_{t}_.png'))
 
 
     def is_test_episode(episode_):
@@ -293,11 +294,33 @@ def train(
             train_ep_reward = episode_reward * (1 - is_test_episode(episode))
             reward_cb(None, None, None, ep_reward, train_ep_reward, step)
             if env.render_mode == 'rgb_array' and episode_trigger(episode):
+                all_imgs = os.listdir(recons_dir)
                 video_path = f'{vid_dir}/rl-video-episode-{episode}.mp4'
                 wb.log({"Intersection": wb.Video(video_path, fps=4, format="mp4")})
 
+                log_recon_imgs(all_imgs, episode)
+
+
     # returns average episode reward (e.g., to use for tuning learning curves)
     return total_rewards / cfg.algorithm.num_episodes
+
+def log_recon_imgs(imgs : List, train_episode: int):
+    
+    logged_images = []
+
+    for idx, img in enumerate(imgs):
+        splits = img.split('_')
+
+        if int(splits[2]) == train_episode:
+            log_file_path = recons_dir  +'/' + img
+            logged_images.append(wb.Image(log_file_path, caption=img))
+
+    if logged_images:
+        wb.log({"reconstructed_images": logged_images})
+   
+    pass
+
+
 
 
 def evaluate_trained_model(model_path, env, cfg):
