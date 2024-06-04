@@ -2,7 +2,7 @@
 env: "intersection-v0"
 evaluate_trained: false
 logging:
-  wandb: true
+  wandb: false
   project_name: 'Planet'
   tensorboard_log: 'logs'
   model_path: '/home/tsl/Desktop/models/planet/run-20240501_141635-fs2sufpj (short_horizon)/model.pth'
@@ -23,10 +23,11 @@ env_args:
   high_speed_reward: 0.5
   path_reward: 0
   arrived_reward: 20
+  goal_reward: 5
   simulation_frequency: 10
   policy_frequency: 5
   exit_distance: 70
-  render_mode: rgb_array
+  render_mode: human
   # ego_lane: [
   #           ["o2", "ir2", 0],
   #           ["o1", "ir1", 0]
