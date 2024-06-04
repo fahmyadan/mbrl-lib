@@ -293,7 +293,7 @@ class MPPIOptimizer(Optimizer):
             population = torch.where(
                 population < self.lower_bound, self.lower_bound, population
             )
-            values = obj_fun(population)
+            values, hybrid_popn = obj_fun(population)
             values[values.isnan()] = -1e-10
 
             if callback is not None:
@@ -305,7 +305,8 @@ class MPPIOptimizer(Optimizer):
                 (self.population_size, 1, 1),
             )
             norm = torch.sum(weights) + 1e-10
-            weighted_actions = population * weights
+            # weighted_actions = population * weights
+            weighted_actions = hybrid_popn * weights
             self.mean = torch.sum(weighted_actions, dim=0) / norm
 
         return self.mean.clone()
@@ -681,6 +682,7 @@ class TrajectoryOptimizerAgent(Agent):
                 return self.trajectory_eval_fn(obs, action_sequences)
 
             start_time = time.time()
+            mppi_inputs = get_mppi_obs(obs[1])
             plan = self.optimizer.optimize(
                 trajectory_eval_fn, callback=optimizer_callback
             )
@@ -714,6 +716,10 @@ class TrajectoryOptimizerAgent(Agent):
 
         plan = self.optimizer.optimize(trajectory_eval_fn)
         return plan
+
+def get_mppi_obs(kinematics):
+
+    return 
 
 
 def create_trajectory_optim_agent_for_model(

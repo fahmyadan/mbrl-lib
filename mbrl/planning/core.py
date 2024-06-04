@@ -74,16 +74,17 @@ class RandomAgent(Agent):
 class MPPIAgent(Agent):
     def __init__(self, env: gym.Env, **kwargs):
         self.env = env.unwrapped
+        self.controlled_vehicle = self.env.controlled_vehicles[0]
         self.LENGTH = self.env.controlled_vehicles[0].LENGTH
         self.dt = 1 / self.env.config['simulation_frequency']
         self.mppi_args = kwargs
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.mppi_args['noise_sigma'] = torch.tensor([self.mppi_args['noise_sigma'][0], np.radians(self.mppi_args['noise_sigma'][1])], 
                                                     device = self.device, dtype= torch.double)
-
+        # self.mppi_args['noise_sigma'] = torch.tensor(self.mppi_args['noise_sigma'], device = self.device, dtype= torch.double)
         self.mppi_args['noise_mu'] =  torch.tensor(self.mppi_args['noise_mu'], device = self.device, dtype= torch.double)
-        self.mppi_args['u_min'] = torch.tensor(self.mppi_args['u_min'])
-        self.mppi_args['u_max'] = torch.tensor(self.mppi_args['u_max'])
+        self.mppi_args['u_min'] = torch.tensor(self.mppi_args['u_min'], device = self.device, dtype= torch.double)
+        self.mppi_args['u_max'] = torch.tensor(self.mppi_args['u_max'], device = self.device, dtype= torch.double)
         self.mppi_args['device'] = self.device
         self.mppi = MPPI(self.dynamics_f, self.running_cost, **self.mppi_args)
         self.veh_obj = self.env.controlled_vehicles[0]
@@ -101,6 +102,8 @@ class MPPIAgent(Agent):
 
         acc = action[:, 0].view(-1, 1)
         steer = action[:, 1].view(-1, 1)
+        # steer = self.proportional_steering()
+
 
         wheel_base = self.LENGTH /2 
         dt = self.dt 
@@ -114,6 +117,30 @@ class MPPIAgent(Agent):
         next_state = torch.cat((new_x, new_y, new_yaw, new_speed), dim= 1)
 
         return next_state 
+
+    def proportional_steering(self):
+
+        "steering is controlled by proportional controller given a target lane index"
+        self.controlled_vehicle.follow_road()
+        target_lane = self.controlled_vehicle.target_lane_index
+        steering_angle = self.controlled_vehicle.steering_control(target_lane)
+        steering_angle = np.clip(
+        steering_angle, -self.controlled_vehicle.MAX_STEERING_ANGLE, self.controlled_vehicle.MAX_STEERING_ANGLE
+        )
+
+        steer_array = np.tile(steering_angle, self.mppi.K)
+
+        return torch.tensor(steer_array, device = self.device, dtype= torch.double).view(-1,1)
+
+    def _follow_road(self) -> None:
+        """At the end of a lane, automatically switch to a next one."""
+        if self.road.network.get_lane(self.target_lane_index).after_end(self.position):
+            self.target_lane_index = self.road.network.next_lane(
+                self.target_lane_index,
+                route=self.route,
+                position=self.position,
+                np_random=self.road.np_random,
+            )
 
     def running_cost(self, state, action):
 

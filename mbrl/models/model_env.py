@@ -7,11 +7,14 @@ from typing import Dict, Optional, Tuple
 import gymnasium as gym
 import numpy as np
 import torch
-
+from highway_env import utils
 import mbrl.types
 from mbrl.env.HighwayEnv.highway_env.envs.intersection_env import IntersectionEnv
 
 from . import Model
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ModelEnv:
@@ -34,6 +37,17 @@ class ModelEnv:
             same device as the given model). If None (default value), a new generator will be
             created using the default torch seed.
     """
+    TAU_ACC = 0.6  # [s]
+    TAU_HEADING = 0.2  # [s]
+    TAU_LATERAL = 0.6  # [s]
+
+    TAU_PURSUIT = 0.5 * TAU_HEADING  # [s]
+    KP_A = 1 / TAU_ACC
+    KP_HEADING = 1 / TAU_HEADING
+    KP_LATERAL = 1 / TAU_LATERAL  # [1/s]
+    MAX_STEERING_ANGLE = np.pi / 3  # [rad]
+    DELTA_SPEED = 5  # [m/s]
+    LENGTH = 5.0
 
     def __init__(
         self,
@@ -148,12 +162,12 @@ class ModelEnv:
                 raise NotImplementedError(
                     "ModelEnv doesn't yet support simulating terminal indicators."
                 )
-
+            next_observations = self.dynamics_model._forward_vec_decoder(model_state['latent'], model_state['belief'])
             if self._return_as_np:
                 next_observs = next_observs.cpu().numpy()
                 rewards = rewards.cpu().numpy()
                 dones = dones.cpu().numpy()
-            return next_observs, rewards, dones, next_model_state
+            return next_observs, rewards, dones, next_model_state, next_observations
 
     def render(self, mode="human"):
         pass
@@ -183,7 +197,7 @@ class ModelEnv:
             population_size, horizon, action_dim = action_sequences.shape
             # either 1-D state or 3-D pixel observation
             #TODO: FIX MPPI ACTION Evaluation
-  
+            global tiling_shape
             if not isinstance(self.observation_space, gym.spaces.Tuple):
                 assert initial_state.ndim in (1,2, 3)
 
@@ -208,17 +222,145 @@ class ModelEnv:
             batch_size = initial_obs_batch.shape[0]
             total_rewards = torch.zeros(batch_size, 1).to(self.device)
             terminated = torch.zeros(batch_size, 1, dtype=bool).to(self.device)
+            longitudinal_actions = action_sequences[:,:,0]
+            steering_popn= []
             for time_step in range(horizon):
-                action_for_step = action_sequences[:, time_step, :]
+                steering_actions = self.steering_controller(initial_obs_batch, action_sequences)
+                if any(torch.isnan(steering_actions)):
+                    steering_actions = self._parse_nans(steering_actions, action_sequences[:, time_step, 1] )
+                steering_popn.append(steering_actions)
+                long_actions_for_step = longitudinal_actions[:,time_step].view(-1,1)
+                action_for_step = torch.concatenate([long_actions_for_step, steering_actions], dim=-1)
+                # action_for_step = action_sequences[:, time_step, :]
                 action_batch = torch.repeat_interleave(
                     action_for_step, num_particles, dim=0
                 )
-                _, rewards, dones, model_state = self.step(
+                _, rewards, dones, model_state, next_observations  = self.step(
                     action_batch, model_state, sample=True
                 )
                 rewards[terminated] = 0
                 terminated |= dones
                 total_rewards += rewards
-
+                initial_obs_batch = next_observations[1]
+            steering_tensor = torch.stack(steering_popn, dim=1)
+            hybrid_action_seq = torch.concatenate([longitudinal_actions.unsqueeze(-1), steering_tensor], dim=-1)
             total_rewards = total_rewards.reshape(-1, num_particles)
-            return total_rewards.mean(dim=1)
+            return total_rewards.mean(dim=1), hybrid_action_seq
+
+    def steering_controller(self, obs_batch, actions, scale=100):
+
+        #Get positions @ time t -> (xt, yt) for K samples 
+        all_positions, all_speed, all_heading, all_closest_lane_idx = [], [], [], []
+        steering_angles = []
+        
+
+        if isinstance(obs_batch, torch.Tensor):
+            K = obs_batch.shape[0]
+            np_obs = obs_batch.cpu().numpy()
+            pose, velocity = np_obs[:, :3], np_obs[:,3:]
+            speed = np.linalg.norm(velocity, axis=1).reshape(K, 1)
+            obs_batch = np.concatenate([pose, speed], axis=-1)
+            
+
+        for idx, obs in enumerate(obs_batch):
+            position_t = obs[:2] * scale
+            all_positions.append(position_t)
+            speed = obs[-1]
+            heading = obs[2]
+            closest_lane_idx = self.env.road.network.get_closest_lane_index(position_t)
+            all_closest_lane_idx.append(closest_lane_idx)
+
+
+        # Get current lane at @ time t and check if on the correct route -> Ln
+            if closest_lane_idx in self.env.controlled_vehicles[0].route:
+                current_lane = self.env.road.network.get_lane(closest_lane_idx)
+
+                # Check if (xt, yt) is @ end of lane -> Lt (target lane)
+                if self.env.road.network.get_lane(closest_lane_idx).after_end(position_t):
+                    target_lane_index = self.env.road.network.next_lane(
+                        closest_lane_idx,
+                        route=self.env.controlled_vehicles[0].route,
+                        position=position_t,
+                        np_random=self.env.road.np_random,
+                    )
+                else:
+                    target_lane_index = closest_lane_idx 
+                
+                steering = self.proportional_steering(target_lane_index, position_t, speed, heading)
+                steering_angles.append(steering) 
+            else: 
+                # return some random steering action 
+                target_lane_index = None 
+                rand_steer = self.env.action_space.sample()[1]
+
+                # logger.warning('Position is off route! Doing Random Steering action')
+                steering_angles.append(float('nan'))
+
+        # Implement steering_control logic 
+
+            # if not target_lane_index:
+            #     rand_steer = self.env.action_space.sample()[1]
+
+            #     logger.warning('Position is off route! Doing Random Steering action')
+            #     steering_angles.append((None, rand_steer))
+            # else: 
+
+            #     steering = self.proportional_steering(target_lane_index, position_t, speed, heading)
+
+            # if steering:
+            #     # steering_samples = np.tile([steering], tiling_shape)
+            #     steering_angles.append(steering) 
+        
+        return torch.tensor(steering_angles, device=self.device).view(-1,1)
+
+    
+
+
+
+    def proportional_steering (self, target_lane_index, position, speed, heading) -> float:
+            """
+            Steer the vehicle to follow the center of an given lane.
+
+            1. Lateral position is controlled by a proportional controller yielding a lateral speed command
+            2. Lateral speed command is converted to a heading reference
+            3. Heading is controlled by a proportional controller yielding a heading rate command
+            4. Heading rate command is converted to a steering angle
+
+            :param target_lane_index: index of the lane to follow
+            :return: a steering wheel angle command [rad]
+            """
+            target_lane = self.env.road.network.get_lane(target_lane_index)
+            lane_coords = target_lane.local_coordinates(position)
+            lane_next_coords = lane_coords[0] + speed * self.TAU_PURSUIT
+            lane_future_heading = target_lane.heading_at(lane_next_coords)
+
+            # Lateral position control
+            lateral_speed_command = -self.KP_LATERAL * lane_coords[1]
+            # Lateral speed to heading
+            heading_command = np.arcsin(
+                np.clip(lateral_speed_command / utils.not_zero(speed), -1, 1)
+            )
+            heading_ref = lane_future_heading + np.clip(
+                heading_command, -np.pi / 4, np.pi / 4
+            )
+            # Heading control
+            heading_rate_command = self.KP_HEADING * utils.wrap_to_pi(
+                heading_ref - heading
+            )
+            # Heading rate to steering angle
+            slip_angle = np.arcsin(
+                np.clip(
+                    self.LENGTH / 2 / utils.not_zero(speed) * heading_rate_command,
+                    -1,
+                    1,
+                )
+            )
+            steering_angle = np.arctan(2 * np.tan(slip_angle))
+            steering_angle = np.clip(
+                steering_angle, -self.MAX_STEERING_ANGLE, self.MAX_STEERING_ANGLE
+            )
+            return float(steering_angle)
+
+    def _parse_nans(self, steering, original_actions):
+
+        return torch.where(torch.isnan(steering), original_actions.view(-1,1), steering)
