@@ -49,15 +49,19 @@ env_args:
           - vx
           - vy
           - lane_id
-        absolute: false
+        absolute: true
         features_range: 
-            x: [0, 0]
-            y: [0, 0]
+            x: [-100, 100]
+            y: [-100, 100]
             vx: [-20, 20]
             vy: [-20, 20]
         
   action: 
     type: ContinuousAction
+    # longitudinal: true
+    # lateral: false
+    # speed_range: [-40,40] 
+    # hybrid: true
 
 term_fn: "no_termination"
 
@@ -88,7 +92,7 @@ mppi_beta: 0.9
 
 mppi:
   nx : 4
-  noise_sigma: [[5, 0],[0,0.7]]
+  noise_sigma: [[5, 0],[0,1.5]]
   noise_mu : [0, 0]
   u_min: [-40, -1.0]
   u_max: [40, 1.0]
