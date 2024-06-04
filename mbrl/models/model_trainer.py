@@ -52,6 +52,8 @@ class ModelTrainer:
         self.model = model
         self._train_iteration = 0
         self.total_grad_updates = cfg.num_grad_updates
+        if cfg.get('optim_lr', None):
+            optim_lr = cfg.optim_lr
         self.logger = logger
         if self.logger:
             self.logger.register_group(
