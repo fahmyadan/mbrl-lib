@@ -12,10 +12,10 @@ class WandbCallback:
 
     def __call__(self, *inputs):
         if self.type == 'reward':
-            obs, action, next_obs, reward, train_ep_reward, step = inputs
+            obs, action, next_obs, reward, train_ep_reward, epoch = inputs
             wandb.log({
             "rollout/ep_rew_mean": reward, 
-            "rollout/ep_length": step})
+            "rollout/n_epochs": epoch})
     
         elif self.type == 'loss':
 

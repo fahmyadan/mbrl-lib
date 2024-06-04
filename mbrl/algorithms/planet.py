@@ -292,7 +292,7 @@ def train(
             reward_cb = wandb[1]
             ep_reward = episode_reward * is_test_episode(episode) 
             train_ep_reward = episode_reward * (1 - is_test_episode(episode))
-            reward_cb(None, None, None, ep_reward, train_ep_reward, step)
+            reward_cb(None, None, None, ep_reward, train_ep_reward, episode)
             if env.render_mode == 'rgb_array' and episode_trigger(episode):
                 all_imgs = os.listdir(recons_dir)
                 video_path = f'{vid_dir}/rl-video-episode-{episode}.mp4'
