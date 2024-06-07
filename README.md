@@ -20,7 +20,9 @@ There are four main config files that must be selected to run the main file. The
 
 `algorithm=planet overrides=planet_highway_env dynamics_model=planet_hw`
 
-The desired action optimizer is MPPI. 
+The desired action optimizer is MPPI.
+
+The main configs (e.g. wandb, env_args etc.) can be found in `overrides=planet_highway_env`
 
 
 # MBRL-Lib
