@@ -12,6 +12,7 @@
  ``` bash 
  sudo chmod +x setup.bash 
 ./setup.bash 
+conda activate mbrl
 python3 mbrl/examples/main.py algorithm=planet overrides=planet_highway_env dynamics_model=planet_hw action_optimizer=mppi
  ```
 to run the ensembles: `git checkout dev/ensemble`. The instructions are there. 
