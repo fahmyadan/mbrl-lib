@@ -13,3 +13,4 @@ pytorch-mppi
 chardet
 importlib-resources
 wandb
+moviepy
