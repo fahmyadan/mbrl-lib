@@ -16,6 +16,13 @@ python3 mbrl/examples/main.py algorithm=planet overrides=planet_highway_env dyna
  ```
 to run the ensembles: `git checkout dev/ensemble`. The instructions are there. 
 
+There are four main config files that must be selected to run the main file. The corresponding folders can be found in `mbrl/examples/conf`. At the moment, the following configurations for the intersection problem have been tested:
+
+`algorithm=planet overrides=planet_highway_env dynamics_model=planet_hw`
+
+The desired action optimizer is MPPI. 
+
+
 # MBRL-Lib
 
 ``mbrl`` is a toolbox for facilitating development of 
